@@ -88,6 +88,10 @@ export function AuthProvider({ children }) {
       };
 
       setCurrentUser(loggedUser);
+
+      // Sync Firebase User Data directly into Google Sheet Users!A:M tab
+      syncUserToSheets(loggedUser);
+
       return loggedUser;
     } catch (err) {
       console.error("Firebase Google Auth Error:", err);
@@ -96,6 +100,36 @@ export function AuthProvider({ children }) {
     } finally {
       setAuthLoading(false);
     }
+  };
+
+  const syncUserToSheets = (u) => {
+    const customUrl = localStorage.getItem('pt_sheets_url');
+    const envUrl = import.meta.env.VITE_APPS_SCRIPT_URL;
+    const endpoint = customUrl || envUrl;
+
+    if (!endpoint || endpoint.includes('YOUR_DEPLOYED_ID_HERE')) return;
+
+    const userRow = [
+      u.id,
+      u.name,
+      u.email,
+      '-', // MobileNumber
+      u.role,
+      u.hospitalId,
+      'TRUE', // IsActive
+      u.role === 'SUPERADMIN' ? 'TRUE' : 'FALSE', // CanEditReports
+      'TRUE', // CanExport
+      new Date().toISOString().replace('T', ' ').substring(0, 19), // LastLogin
+      'Firebase Auth System', // CreatedBy
+      new Date().toISOString().replace('T', ' ').substring(0, 19), // CreatedOn
+      new Date().toISOString().replace('T', ' ').substring(0, 19)  // UpdatedOn
+    ];
+
+    fetch(`${endpoint}?action=appendRow`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ action: 'appendRow', tabName: 'Users', rowData: userRow })
+    }).catch(() => {});
   };
 
   // Direct Email Fallback Sign-In
