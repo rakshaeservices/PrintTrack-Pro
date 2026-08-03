@@ -11,7 +11,8 @@ import {
   History, 
   Settings,
   Boxes,
-  Users
+  Users,
+  ShieldCheck
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
@@ -32,7 +33,8 @@ export default function Sidebar({ activeTab, setActiveTab, isMobileMenuOpen, set
     { id: 'consumables',      label: 'Future Consumables',   icon: Boxes,            roles: ['SUPERADMIN', 'DIRECTOR', 'MANAGER'] },
     { id: 'reports',          label: 'Reports',              icon: BarChart3,        roles: ['SUPERADMIN', 'DIRECTOR', 'MANAGER', 'LOCATION_ADMIN'] },
     { id: 'audit_log',        label: 'Audit Trail',          icon: History,          roles: ['SUPERADMIN', 'DIRECTOR'] },
-    { id: 'settings',         label: 'Settings & API Config',icon: Settings,         roles: ['SUPERADMIN'] }
+    { id: 'permissions',      label: 'Permissions & Access',  icon: ShieldCheck,      roles: ['SUPERADMIN'] },
+    { id: 'settings',         label: 'Settings & API Config', icon: Settings,         roles: ['SUPERADMIN'] }
   ];
 
   return (

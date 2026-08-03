@@ -17,6 +17,7 @@ import FutureConsumables from './pages/FutureConsumables';
 import Reports from './pages/Reports';
 import AuditLog from './pages/AuditLog';
 import Settings from './pages/Settings';
+import Permissions from './pages/Permissions';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { DataProvider } from './context/DataContext';
 
@@ -50,6 +51,7 @@ function AppContent() {
       case 'reports': return <Reports />;
       case 'audit_log': return <AuditLog />;
       case 'settings': return <Settings />;
+      case 'permissions': return <Permissions />;
       default: return <Dashboard />;
     }
   };
