@@ -74,21 +74,21 @@ export default function Dashboard() {
       {/* Grid of Stat Cards matching exact specification prompt */}
       <div style={{
         display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
-        gap: '0.75rem'
+        gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
+        gap: '0.5rem'
       }}>
         {statCards.map((card, idx) => {
           const Icon = card.icon;
           return (
             <div key={idx} className="stat-card">
               <div className="stat-icon" style={{ backgroundColor: `${card.color}20`, color: card.color }}>
-                <Icon size={20} />
+                <Icon size={18} />
               </div>
               <div>
-                <span style={{ fontSize: '0.725rem', color: 'var(--text-muted)', display: 'block', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                <span style={{ fontSize: '0.675rem', color: 'var(--text-muted)', display: 'block', textTransform: 'uppercase', letterSpacing: '0.02em' }}>
                   {card.title}
                 </span>
-                <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#fff', marginTop: '0.1rem' }}>
+                <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#fff', marginTop: '0.1rem' }}>
                   {card.value}
                 </h3>
               </div>
@@ -98,7 +98,7 @@ export default function Dashboard() {
       </div>
 
       {/* Analytics Charts & Summaries */}
-      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '0.75rem' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '0.75rem' }}>
         
         {/* Monthly Consumption Trend */}
         <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: 'var(--clm-radius-md)', padding: '0.75rem 1rem' }}>
@@ -107,7 +107,7 @@ export default function Dashboard() {
             <span style={{ fontSize: '0.725rem', color: 'var(--accent)' }}>Aug 2026</span>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'flex-end', gap: '1.5rem', height: '140px', paddingTop: '1rem', paddingBottom: '0.5rem', borderBottom: '1px solid var(--border-color)' }}>
+          <div style={{ display: 'flex', alignItems: 'flex-end', gap: '1rem', height: '140px', paddingTop: '1rem', paddingBottom: '0.5rem', borderBottom: '1px solid var(--border-color)' }}>
             {[
               { month: 'Jun', pages: 220000, height: '70%' },
               { month: 'Jul', pages: 241000, height: '82%' },
@@ -132,12 +132,12 @@ export default function Dashboard() {
           <h3 style={{ fontSize: '0.9rem', fontWeight: 600, color: '#fff', marginBottom: '0.75rem' }}>Hospital Stock Summary</h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
             {hospitals.map((h) => {
-              const { totalStock } = calculateHospitalStock(h.id);
+              const { totalStock } = calculateHospitalStock(h.HospitalID || h.id);
               return (
-                <div key={h.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.4rem 0.6rem', background: '#0f172a', borderRadius: 'var(--clm-radius-sm)', border: '1px solid var(--border-color)' }}>
+                <div key={h.HospitalID || h.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.4rem 0.6rem', background: '#0f172a', borderRadius: 'var(--clm-radius-sm)', border: '1px solid var(--border-color)' }}>
                   <div>
-                    <span style={{ fontWeight: 600, fontSize: '0.8125rem' }}>{h.name}</span>
-                    <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', display: 'block' }}>Code: {h.code}</span>
+                    <span style={{ fontWeight: 600, fontSize: '0.8125rem' }}>{h.HospitalName || h.name}</span>
+                    <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', display: 'block' }}>Code: {h.HospitalCode || h.code}</span>
                   </div>
                   <span className={`badge ${totalStock < 50 ? 'badge-warning' : 'badge-success'}`}>
                     {totalStock} Rims

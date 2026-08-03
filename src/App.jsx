@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import Navbar from './components/Navbar';
 import Sidebar from './components/Sidebar';
+import BottomNavbar from './components/BottomNavbar';
 import Loader from './components/Loader';
 import Dashboard from './pages/Dashboard';
+import UserManagement from './pages/UserManagement';
 import Hospitals from './pages/Hospitals';
 import Counters from './pages/Counters';
 import MonthlyReadings from './pages/MonthlyReadings';
@@ -18,10 +20,12 @@ import { DataProvider } from './context/DataContext';
 
 function AppContent() {
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const renderContent = () => {
     switch (activeTab) {
       case 'dashboard': return <Dashboard />;
+      case 'users': return <UserManagement />;
       case 'hospitals': return <Hospitals />;
       case 'counters': return <Counters />;
       case 'monthly_readings': return <MonthlyReadings />;
@@ -39,15 +43,23 @@ function AppContent() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
       <Loader />
-      <Navbar />
-      <div style={{ display: 'flex', flex: 1 }}>
-        <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
-        <main style={{ flex: 1, padding: '1rem', overflowY: 'auto' }}>
+      <Navbar isMobileMenuOpen={isMobileMenuOpen} setIsMobileMenuOpen={setIsMobileMenuOpen} />
+      
+      <div style={{ display: 'flex', flex: 1, position: 'relative' }}>
+        <Sidebar 
+          activeTab={activeTab} 
+          setActiveTab={setActiveTab} 
+          isMobileMenuOpen={isMobileMenuOpen}
+          setIsMobileMenuOpen={setIsMobileMenuOpen}
+        />
+        <main style={{ flex: 1, padding: '0.75rem', overflowY: 'auto', width: '100%' }}>
           <div className="container-fluid">
             {renderContent()}
           </div>
         </main>
       </div>
+
+      <BottomNavbar activeTab={activeTab} setActiveTab={setActiveTab} />
     </div>
   );
 }

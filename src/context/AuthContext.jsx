@@ -11,7 +11,7 @@ export const ROLES = {
 };
 
 export const MOCK_USERS = [
-  { id: 'u1', name: 'Super Admin User', email: 'admin@printtrack.com', role: 'SUPERADMIN', hospitalId: 'ALL' },
+  { id: 'u1', name: 'Lovejeet (Super Admin)', email: 'softtech.lovejeet@gmail.com', role: 'SUPERADMIN', hospitalId: 'ALL' },
   { id: 'u2', name: 'Executive Director', email: 'director@printtrack.com', role: 'DIRECTOR', hospitalId: 'ALL' },
   { id: 'u3', name: 'Operations Manager', email: 'manager@printtrack.com', role: 'MANAGER', hospitalId: 'ALL' },
   { id: 'u4', name: 'UMMED Location Admin', email: 'admin.ummed@printtrack.com', role: 'LOCATION_ADMIN', hospitalId: 'h1' },
