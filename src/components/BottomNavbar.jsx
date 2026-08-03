@@ -3,21 +3,22 @@ import { LayoutDashboard, FileSpreadsheet, Send, BarChart3, Building2 } from 'lu
 import { useAuth } from '../context/AuthContext';
 
 export default function BottomNavbar({ activeTab, setActiveTab }) {
-  const { hasPermission } = useAuth();
+  const { currentUser } = useAuth();
+  const role = currentUser?.role;
 
   const bottomItems = [
-    { id: 'dashboard', label: 'Home', icon: LayoutDashboard, perm: 'view_dashboard' },
-    { id: 'hospitals', label: 'Hospitals', icon: Building2, perm: 'all' },
-    { id: 'monthly_readings', label: 'Readings', icon: FileSpreadsheet, perm: 'view_readings' },
-    { id: 'issue_paper', label: 'Issue', icon: Send, perm: 'issue_paper' },
-    { id: 'reports', label: 'Reports', icon: BarChart3, perm: 'view_reports' }
+    { id: 'dashboard',        label: 'Home',      icon: LayoutDashboard,  roles: ['SUPERADMIN', 'DIRECTOR', 'MANAGER', 'LOCATION_ADMIN', 'STORE_OPERATOR'] },
+    { id: 'hospitals',        label: 'Hospitals', icon: Building2,        roles: ['SUPERADMIN', 'DIRECTOR'] },
+    { id: 'monthly_readings', label: 'Readings',  icon: FileSpreadsheet,  roles: ['SUPERADMIN', 'MANAGER', 'LOCATION_ADMIN', 'STORE_OPERATOR'] },
+    { id: 'issue_paper',      label: 'Issue',     icon: Send,             roles: ['SUPERADMIN', 'MANAGER', 'STORE_OPERATOR'] },
+    { id: 'reports',          label: 'Reports',   icon: BarChart3,        roles: ['SUPERADMIN', 'DIRECTOR', 'MANAGER', 'LOCATION_ADMIN'] }
   ];
 
   return (
     <nav className="bottom-navbar">
       {bottomItems.map(item => {
         const Icon = item.icon;
-        const isAllowed = item.perm === 'all' ? true : hasPermission(item.perm);
+        const isAllowed = item.roles.includes(role);
         if (!isAllowed) return null;
 
         const isActive = activeTab === item.id;

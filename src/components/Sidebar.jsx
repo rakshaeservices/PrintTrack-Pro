@@ -18,19 +18,21 @@ import { useAuth } from '../context/AuthContext';
 export default function Sidebar({ activeTab, setActiveTab, isMobileMenuOpen, setIsMobileMenuOpen }) {
   const { currentUser, hasPermission } = useAuth();
 
+  const role = currentUser?.role;
+
   const navItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, perm: 'view_dashboard' },
-    { id: 'users', label: 'User Management', icon: Users, perm: 'superadmin_only' },
-    { id: 'hospitals', label: 'Hospitals', icon: Building2, perm: 'all' },
-    { id: 'counters', label: 'Counters (Printers)', icon: Printer, perm: 'all' },
-    { id: 'monthly_readings', label: 'Monthly Readings', icon: FileSpreadsheet, perm: 'view_readings' },
-    { id: 'stock', label: 'Stock Ledger', icon: Package, perm: 'view_stock' },
-    { id: 'issue_paper', label: 'Issue Paper', icon: Send, perm: 'issue_paper' },
-    { id: 'paper_types', label: 'Paper Types', icon: Layers, perm: 'all' },
-    { id: 'consumables', label: 'Future Consumables', icon: Boxes, perm: 'all' },
-    { id: 'reports', label: 'Reports', icon: BarChart3, perm: 'view_reports' },
-    { id: 'audit_log', label: 'Audit Trail', icon: History, perm: 'all' },
-    { id: 'settings', label: 'Settings & API Config', icon: Settings, perm: 'all' }
+    { id: 'dashboard',        label: 'Dashboard',            icon: LayoutDashboard,  roles: ['SUPERADMIN', 'DIRECTOR', 'MANAGER', 'LOCATION_ADMIN', 'STORE_OPERATOR'] },
+    { id: 'users',            label: 'User Management',      icon: Users,            roles: ['SUPERADMIN'] },
+    { id: 'hospitals',        label: 'Hospital Registry',    icon: Building2,        roles: ['SUPERADMIN', 'DIRECTOR'] },
+    { id: 'counters',         label: 'Counters (Printers)',  icon: Printer,          roles: ['SUPERADMIN', 'MANAGER', 'LOCATION_ADMIN'] },
+    { id: 'monthly_readings', label: 'Monthly Readings',     icon: FileSpreadsheet,  roles: ['SUPERADMIN', 'MANAGER', 'LOCATION_ADMIN', 'STORE_OPERATOR'] },
+    { id: 'stock',            label: 'Stock Ledger',         icon: Package,          roles: ['SUPERADMIN', 'MANAGER', 'LOCATION_ADMIN', 'STORE_OPERATOR'] },
+    { id: 'issue_paper',      label: 'Issue Paper',          icon: Send,             roles: ['SUPERADMIN', 'MANAGER', 'STORE_OPERATOR'] },
+    { id: 'paper_types',      label: 'Paper Types',          icon: Layers,           roles: ['SUPERADMIN', 'MANAGER'] },
+    { id: 'consumables',      label: 'Future Consumables',   icon: Boxes,            roles: ['SUPERADMIN', 'DIRECTOR', 'MANAGER'] },
+    { id: 'reports',          label: 'Reports',              icon: BarChart3,        roles: ['SUPERADMIN', 'DIRECTOR', 'MANAGER', 'LOCATION_ADMIN'] },
+    { id: 'audit_log',        label: 'Audit Trail',          icon: History,          roles: ['SUPERADMIN', 'DIRECTOR'] },
+    { id: 'settings',         label: 'Settings & API Config',icon: Settings,         roles: ['SUPERADMIN'] }
   ];
 
   return (
@@ -47,17 +49,7 @@ export default function Sidebar({ activeTab, setActiveTab, isMobileMenuOpen, set
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
           {navItems.map((item) => {
             const Icon = item.icon;
-            
-            // Check strict RBAC for Super Admin only User Management module
-            let isAllowed = false;
-            if (item.perm === 'superadmin_only') {
-              isAllowed = currentUser.role === 'SUPERADMIN';
-            } else if (item.perm === 'all') {
-              isAllowed = true;
-            } else {
-              isAllowed = hasPermission(item.perm);
-            }
-
+            const isAllowed = item.roles.includes(role);
             if (!isAllowed) return null;
 
             const isActive = activeTab === item.id;
