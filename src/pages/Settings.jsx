@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Database, Key, Check, Server, FileCode, Copy, ShieldCheck } from 'lucide-react';
+import { Database, Key, Check, Server, ShieldCheck } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 export default function Settings() {
@@ -8,8 +8,6 @@ export default function Settings() {
   const [googleSheetsApiUrl, setGoogleSheetsApiUrl] = useState(() => {
     return localStorage.getItem('pt_sheets_url') || 'https://script.google.com/macros/s/AKfycbxYOUR_DEPLOYED_ID_HERE/exec';
   });
-
-  const [copied, setCopied] = useState(false);
 
   const saveSettings = () => {
     localStorage.setItem('pt_sheets_url', googleSheetsApiUrl);
@@ -88,7 +86,29 @@ export default function Settings() {
         </div>
       </div>
 
+      {/* Google Apps Script Web App URL Input Card */}
+      <div style={{ background: 'var(--bg-card)', border: '1px solid var(--accent)', borderRadius: 'var(--clm-radius-md)', padding: '1rem' }}>
+        <h3 style={{ fontSize: '0.9rem', fontWeight: 600, color: '#fff', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+          <Key size={16} color="var(--accent)" /> Google Apps Script Deployed Web App URL
+        </h3>
+        <p style={{ fontSize: '0.725rem', color: 'var(--text-muted)', marginBottom: '0.75rem' }}>
+          Paste your Google Apps Script Web App URL here (e.g. <code>https://script.google.com/macros/s/AKfycbx.../exec</code>) to connect Netlify directly to your Google Sheet.
+        </p>
+
+        <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <input
+            type="text"
+            className="form-control"
+            placeholder="Paste your https://script.google.com/macros/s/.../exec URL here"
+            value={googleSheetsApiUrl}
+            onChange={e => setGoogleSheetsApiUrl(e.target.value)}
+          />
+          <button className="btn btn-primary" onClick={saveSettings} style={{ whiteSpace: 'nowrap' }}>
+            <Check size={14} /> Save Web App URL
+          </button>
+        </div>
+      </div>
+
     </div>
   );
 }
-
