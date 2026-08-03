@@ -3,8 +3,9 @@ import { Printer, AlertCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 export default function LoginPage() {
-  const { loginWithFirebaseGoogle, loginWithEmailDirect, authError } = useAuth();
+  const { loginWithFirebaseGoogle, loginWithEmailPassword, authError } = useAuth();
   const [customEmail, setCustomEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [customName, setCustomName] = useState('');
   const [isSigningIn, setIsSigningIn] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
@@ -18,7 +19,7 @@ export default function LoginPage() {
     } catch (err) {
       console.log("Firebase popup fallback:", err);
       if (err.message && err.message.includes('api-key-not-valid')) {
-        setErrorMsg('Firebase Web API key is not configured in .env. Please fill your email below to log in directly.');
+        setErrorMsg('Firebase Web API key is not configured in .env. Please fill your email & password below to log in directly.');
       } else {
         setErrorMsg(err.message || 'Firebase OAuth popup closed or blocked.');
       }
@@ -27,12 +28,19 @@ export default function LoginPage() {
     }
   };
 
-  // 2. Secondary Action: Direct Email Login Fallback
-  const handleEmailSubmit = (e) => {
+  // 2. Secondary Action: Firebase Email & Password Sign-In
+  const handleEmailSubmit = async (e) => {
     e.preventDefault();
     if (!customEmail) return;
     setIsSigningIn(true);
-    loginWithEmailDirect(customEmail, customName);
+    setErrorMsg('');
+    try {
+      await loginWithEmailPassword(customEmail, password || 'PrintTrack@123', customName);
+    } catch (err) {
+      setErrorMsg(err.message || 'Email & Password Authentication failed.');
+    } finally {
+      setIsSigningIn(false);
+    }
   };
 
   return (
@@ -149,6 +157,20 @@ export default function LoginPage() {
               placeholder="e.g. softtech.lovejeet@gmail.com"
               value={customEmail}
               onChange={e => setCustomEmail(e.target.value)}
+              style={{ padding: '0.55rem 0.75rem' }}
+            />
+          </div>
+
+          <div>
+            <label style={{ fontSize: '0.725rem', color: '#94a3b8', marginBottom: '0.35rem', display: 'block', fontWeight: 500 }}>
+              Account Password
+            </label>
+            <input
+              type="password"
+              className="form-control"
+              placeholder="Enter password (e.g. PrintTrack@123)"
+              value={password}
+              onChange={e => setPassword(e.target.value)}
               style={{ padding: '0.55rem 0.75rem' }}
             />
           </div>

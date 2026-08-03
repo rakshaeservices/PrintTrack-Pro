@@ -1,5 +1,12 @@
 import { initializeApp } from 'firebase/app';
-import { getAuth, GoogleAuthProvider, signInWithPopup, signOut } from 'firebase/auth';
+import { 
+  getAuth, 
+  GoogleAuthProvider, 
+  signInWithPopup, 
+  signInWithEmailAndPassword, 
+  createUserWithEmailAndPassword,
+  signOut 
+} from 'firebase/auth';
 
 // Firebase configuration using Environment Variables with your actual credentials
 const firebaseConfig = {
@@ -17,4 +24,4 @@ const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
 
-export { signInWithPopup, signOut };
+export { signInWithPopup, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut };

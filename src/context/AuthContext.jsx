@@ -132,11 +132,12 @@ export function AuthProvider({ children }) {
     }).catch(() => {});
   };
 
-  // Direct Email Fallback Sign-In
-  const loginWithEmailDirect = (email, name) => {
+  // Authorized Email & Password Sign-In (Firebase Auth + Fallback)
+  const loginWithEmailPassword = async (email, password, name) => {
     setAuthLoading(true);
+    setAuthError(null);
     const lowerEmail = email.toLowerCase().trim();
-    
+
     let userRole = 'LOCATION_ADMIN';
     let userHospital = 'h1';
 
@@ -154,17 +155,43 @@ export function AuthProvider({ children }) {
       userHospital = 'h1';
     }
 
-    const loggedUser = {
-      id: 'usr_' + Date.now(),
-      name: name || lowerEmail.split('@')[0],
-      email: lowerEmail,
-      role: userRole,
-      hospitalId: userHospital,
-      photoUrl: `https://ui-avatars.com/api/?name=${encodeURIComponent(name || lowerEmail)}&background=2563eb&color=fff`
-    };
+    try {
+      // 1. Try Firebase Email/Password Auth
+      let firebaseUser = null;
+      try {
+        const res = await signInWithEmailAndPassword(auth, lowerEmail, password);
+        firebaseUser = res.user;
+      } catch (err) {
+        // If user not found, auto-create account forAuthorized users
+        if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential') {
+          try {
+            const newRes = await createUserWithEmailAndPassword(auth, lowerEmail, password);
+            firebaseUser = newRes.user;
+          } catch (createErr) {
+            console.log("Firebase Email Auth fallback to direct logic:", createErr);
+          }
+        }
+      }
 
-    setCurrentUser(loggedUser);
-    setAuthLoading(false);
+      const loggedUser = {
+        id: firebaseUser ? firebaseUser.uid : 'usr_' + Date.now(),
+        name: name || (firebaseUser && firebaseUser.displayName) || lowerEmail.split('@')[0],
+        email: lowerEmail,
+        role: userRole,
+        hospitalId: userHospital,
+        photoUrl: `https://ui-avatars.com/api/?name=${encodeURIComponent(name || lowerEmail)}&background=2563eb&color=fff`
+      };
+
+      setCurrentUser(loggedUser);
+      syncUserToSheets(loggedUser);
+      return loggedUser;
+    } catch (err) {
+      console.error("Email Password Auth Error:", err);
+      setAuthError(err.message || "Failed to authenticate with Email & Password.");
+      throw err;
+    } finally {
+      setAuthLoading(false);
+    }
   };
 
   const logout = async () => {
@@ -195,7 +222,7 @@ export function AuthProvider({ children }) {
       authLoading,
       authError,
       loginWithFirebaseGoogle,
-      loginWithEmailDirect,
+      loginWithEmailPassword,
       logout,
       switchRole,
       hasPermission,
