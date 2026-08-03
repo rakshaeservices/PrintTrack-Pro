@@ -1,9 +1,9 @@
 import React from 'react';
-import { Printer, Shield, User, Database, Menu, X } from 'lucide-react';
+import { Printer, Shield, LogOut, Menu, X } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 export default function Navbar({ isMobileMenuOpen, setIsMobileMenuOpen }) {
-  const { currentUser, switchRole, mockUsers, authMode, setAuthMode } = useAuth();
+  const { currentUser, switchRole, mockUsers, logout } = useAuth();
 
   return (
     <header className="glass-header">
@@ -48,15 +48,21 @@ export default function Navbar({ isMobileMenuOpen, setIsMobileMenuOpen }) {
           </div>
         </div>
 
-        {/* Right: Role Switcher & Role Badge */}
+        {/* Right: User Avatar, Role Switcher & Logout */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
           
-          <div style={{ display: 'flex', alignItems: 'center', background: 'var(--bg-card)', padding: '0.15rem 0.35rem', borderRadius: 'var(--clm-radius-sm)', border: '1px solid var(--border-color)' }}>
-            <User size={12} color="var(--success)" style={{ marginRight: '0.2rem' }} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', background: 'var(--bg-card)', padding: '0.15rem 0.4rem', borderRadius: 'var(--clm-radius-sm)', border: '1px solid var(--border-color)' }}>
+            {currentUser?.photoUrl && (
+              <img 
+                src={currentUser.photoUrl} 
+                alt="User" 
+                style={{ width: '18px', height: '18px', borderRadius: '50%' }}
+              />
+            )}
             <select
               className="form-select"
-              style={{ padding: '0.1rem 0.2rem', fontSize: '0.7rem', border: 'none', background: 'transparent', maxWidth: '110px' }}
-              value={currentUser.id}
+              style={{ padding: '0.1rem 0.2rem', fontSize: '0.7rem', border: 'none', background: 'transparent', maxWidth: '100px' }}
+              value={currentUser?.id || 'custom'}
               onChange={(e) => switchRole(e.target.value)}
             >
               {mockUsers.map(u => (
@@ -67,9 +73,18 @@ export default function Navbar({ isMobileMenuOpen, setIsMobileMenuOpen }) {
             </select>
           </div>
 
-          <span className={`badge ${currentUser.role === 'SUPERADMIN' ? 'badge-danger' : 'badge-primary'}`} style={{ fontSize: '0.675rem', padding: '0.2rem 0.4rem' }}>
-            <Shield size={9} /> {currentUser.role}
+          <span className={`badge ${currentUser?.role === 'SUPERADMIN' ? 'badge-danger' : 'badge-primary'}`} style={{ fontSize: '0.65rem', padding: '0.2rem 0.4rem' }}>
+            <Shield size={9} /> {currentUser?.role}
           </span>
+
+          <button
+            onClick={logout}
+            className="btn btn-outline btn-sm"
+            title="Sign Out"
+            style={{ padding: '0.25rem 0.4rem', borderColor: 'var(--border-color)', color: 'var(--text-muted)' }}
+          >
+            <LogOut size={13} color="var(--danger)" />
+          </button>
         </div>
 
       </div>

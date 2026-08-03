@@ -3,6 +3,8 @@ import Navbar from './components/Navbar';
 import Sidebar from './components/Sidebar';
 import BottomNavbar from './components/BottomNavbar';
 import Loader from './components/Loader';
+import InitialLoadingScreen from './components/InitialLoadingScreen';
+import LoginPage from './pages/LoginPage';
 import Dashboard from './pages/Dashboard';
 import UserManagement from './pages/UserManagement';
 import Hospitals from './pages/Hospitals';
@@ -15,13 +17,25 @@ import FutureConsumables from './pages/FutureConsumables';
 import Reports from './pages/Reports';
 import AuditLog from './pages/AuditLog';
 import Settings from './pages/Settings';
-import { AuthProvider } from './context/AuthContext';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import { DataProvider } from './context/DataContext';
 
 function AppContent() {
+  const { currentUser, authLoading } = useAuth();
   const [activeTab, setActiveTab] = useState('dashboard');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
+  // 1. App Initial Brand Loading Screen
+  if (authLoading) {
+    return <InitialLoadingScreen />;
+  }
+
+  // 2. Google Identity Sign-In Gatekeeper Page
+  if (!currentUser) {
+    return <LoginPage />;
+  }
+
+  // 3. Authenticated App Layout
   const renderContent = () => {
     switch (activeTab) {
       case 'dashboard': return <Dashboard />;

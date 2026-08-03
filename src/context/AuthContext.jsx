@@ -21,20 +21,78 @@ export const MOCK_USERS = [
 export function AuthProvider({ children }) {
   const [currentUser, setCurrentUser] = useState(() => {
     const saved = localStorage.getItem('printtrack_user');
-    return saved ? JSON.parse(saved) : MOCK_USERS[0];
+    return saved ? JSON.parse(saved) : null; // Default to null to show Google Sign-In Page
   });
 
+  const [authLoading, setAuthLoading] = useState(true);
   const [authMode, setAuthMode] = useState(() => {
-    return localStorage.getItem('printtrack_auth_mode') || 'GOOGLE_OAUTH'; // GOOGLE_OAUTH | FIREBASE | SHEETS_API
+    return localStorage.getItem('printtrack_auth_mode') || 'GOOGLE_OAUTH';
   });
+
+  // Initial App Loading State Effect
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setAuthLoading(false);
+    }, 1200); // Smooth initial brand loading screen
+    return () => clearTimeout(timer);
+  }, []);
 
   useEffect(() => {
-    localStorage.setItem('printtrack_user', JSON.stringify(currentUser));
+    if (currentUser) {
+      localStorage.setItem('printtrack_user', JSON.stringify(currentUser));
+    } else {
+      localStorage.removeItem('printtrack_user');
+    }
   }, [currentUser]);
 
   useEffect(() => {
     localStorage.setItem('printtrack_auth_mode', authMode);
   }, [authMode]);
+
+  const loginWithGoogle = (email, name, photoUrl) => {
+    setAuthLoading(true);
+    setTimeout(() => {
+      const lowerEmail = email.toLowerCase().trim();
+      
+      // Auto-assign SUPERADMIN role to softtech.lovejeet@gmail.com
+      let userRole = 'LOCATION_ADMIN';
+      let userHospital = 'h1';
+
+      if (lowerEmail === 'softtech.lovejeet@gmail.com' || lowerEmail.includes('admin')) {
+        userRole = 'SUPERADMIN';
+        userHospital = 'ALL';
+      } else if (lowerEmail.includes('director')) {
+        userRole = 'DIRECTOR';
+        userHospital = 'ALL';
+      } else if (lowerEmail.includes('manager')) {
+        userRole = 'MANAGER';
+        userHospital = 'ALL';
+      } else if (lowerEmail.includes('operator')) {
+        userRole = 'STORE_OPERATOR';
+        userHospital = 'h1';
+      }
+
+      const loggedUser = {
+        id: 'usr_' + Date.now(),
+        name: name || lowerEmail.split('@')[0],
+        email: lowerEmail,
+        role: userRole,
+        hospitalId: userHospital,
+        photoUrl: photoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(name || lowerEmail)}&background=2563eb&color=fff`
+      };
+
+      setCurrentUser(loggedUser);
+      setAuthLoading(false);
+    }, 800);
+  };
+
+  const logout = () => {
+    setAuthLoading(true);
+    setTimeout(() => {
+      setCurrentUser(null);
+      setAuthLoading(false);
+    }, 400);
+  };
 
   const switchRole = (userId) => {
     const found = MOCK_USERS.find(u => u.id === userId);
@@ -52,6 +110,9 @@ export function AuthProvider({ children }) {
     <AuthContext.Provider value={{
       currentUser,
       setCurrentUser,
+      authLoading,
+      loginWithGoogle,
+      logout,
       switchRole,
       hasPermission,
       authMode,
