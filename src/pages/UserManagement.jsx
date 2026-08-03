@@ -4,7 +4,7 @@ import { useData } from '../context/DataContext';
 import { useAuth } from '../context/AuthContext';
 
 export default function UserManagement() {
-  const { users, setUsers, hospitals, triggerServerAction, addAuditLog } = useData();
+  const { users, setUsers, hospitals, triggerServerAction, addAuditLog, saveToSheet } = useData();
   const { currentUser } = useAuth();
 
   const [showModal, setShowModal] = useState(false);
@@ -13,7 +13,7 @@ export default function UserManagement() {
     Email: '',
     MobileNumber: '',
     Role: 'LOCATION_ADMIN',
-    HospitalID: hospitals[0]?.id || 'ALL',
+    HospitalID: hospitals[0]?.HospitalID || hospitals[0]?.id || 'ALL',
     IsActive: 'TRUE',
     CanEditReports: 'FALSE',
     CanExport: 'TRUE'
@@ -34,10 +34,11 @@ export default function UserManagement() {
   const handleAddUser = async (e) => {
     e.preventDefault();
     await triggerServerAction(async () => {
+      const now = new Date().toISOString().replace('T', ' ').substring(0, 19);
       const newUser = {
         UserID: 'USR-' + Date.now(),
         FullName: formData.FullName,
-        Email: formData.Email,
+        Email: formData.Email.toLowerCase().trim(),
         MobileNumber: formData.MobileNumber,
         Role: formData.Role,
         HospitalID: formData.HospitalID,
@@ -46,11 +47,25 @@ export default function UserManagement() {
         CanExport: formData.CanExport,
         LastLogin: '-',
         CreatedBy: currentUser.email,
-        CreatedOn: new Date().toISOString().replace('T', ' ').substring(0, 19),
-        UpdatedOn: new Date().toISOString().replace('T', ' ').substring(0, 19)
+        CreatedOn: now,
+        UpdatedOn: now
       };
 
+      // Prevent duplicate email
+      const alreadyExists = users.some(u => (u.Email || '').toLowerCase() === newUser.Email);
+      if (alreadyExists) {
+        alert(`User with email "${newUser.Email}" already exists.`);
+        return;
+      }
+
       setUsers([newUser, ...users]);
+      // Persist to Users!A:M (13 columns)
+      await saveToSheet('Users', [
+        newUser.UserID, newUser.FullName, newUser.Email,
+        newUser.MobileNumber, newUser.Role, newUser.HospitalID,
+        'TRUE', formData.CanEditReports, formData.CanExport,
+        '-', currentUser.email, now, now
+      ]);
       addAuditLog(currentUser.email, 'Add System User', '-', `${newUser.FullName} (${newUser.Email} - ${newUser.Role})`);
       setShowModal(false);
       setFormData({
@@ -58,7 +73,7 @@ export default function UserManagement() {
         Email: '',
         MobileNumber: '',
         Role: 'LOCATION_ADMIN',
-        HospitalID: hospitals[0]?.id || 'ALL',
+        HospitalID: hospitals[0]?.HospitalID || hospitals[0]?.id || 'ALL',
         IsActive: 'TRUE',
         CanEditReports: 'FALSE',
         CanExport: 'TRUE'
@@ -81,29 +96,7 @@ export default function UserManagement() {
         </button>
       </div>
 
-      {/* RBAC Reference Accounts Panel */}
-      <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: 'var(--clm-radius-md)', padding: '0.85rem' }}>
-        <h3 style={{ fontSize: '0.85rem', fontWeight: 600, color: '#fff', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-          <Shield size={14} color="var(--accent)" /> System Pre-Configured RBAC Demo Accounts
-        </h3>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.5rem' }}>
-          {[
-            { name: 'Lovejeet (Super Admin)', email: 'softtech.lovejeet@gmail.com', role: 'SUPERADMIN' },
-            { name: 'Executive Director', email: 'director@printtrack.com', role: 'DIRECTOR' },
-            { name: 'Operations Manager', email: 'manager@printtrack.com', role: 'MANAGER' },
-            { name: 'UMMED Location Admin', email: 'admin.ummed@printtrack.com', role: 'LOCATION_ADMIN' },
-            { name: 'Store Operator', email: 'operator@printtrack.com', role: 'STORE_OPERATOR' }
-          ].map(acc => (
-            <div key={acc.email} style={{ background: '#0f172a', padding: '0.5rem', borderRadius: 'var(--clm-radius-sm)', border: '1px solid var(--border-color)' }}>
-              <div style={{ fontWeight: 600, fontSize: '0.75rem', color: '#fff' }}>{acc.name}</div>
-              <div style={{ fontSize: '0.675rem', color: 'var(--text-muted)' }}>{acc.email}</div>
-              <span className={`badge ${acc.role === 'SUPERADMIN' ? 'badge-danger' : 'badge-primary'}`} style={{ marginTop: '0.25rem', fontSize: '0.625rem' }}>
-                {acc.role}
-              </span>
-            </div>
-          ))}
-        </div>
-      </div>
+
 
       <div className="table-responsive">
         <table className="table-compact">
@@ -127,7 +120,7 @@ export default function UserManagement() {
                 </td>
               </tr>
             ) : (
-              users.map(u => (
+              [...new Map(users.map(u => [(u.Email || '').toLowerCase(), u])).values()].map(u => (
                 <tr key={u.UserID || u.Email}>
                   <td style={{ fontWeight: 600, color: '#fff' }}>{u.FullName}</td>
                   <td>

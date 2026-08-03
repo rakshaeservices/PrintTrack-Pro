@@ -174,14 +174,19 @@ export function AuthProvider({ children }) {
     if (!endpoint || endpoint.includes('YOUR_DEPLOYED_ID_HERE')) return;
 
     const now = new Date().toISOString().replace('T', ' ').substring(0, 19);
-    fetch(`${endpoint}?action=appendRow`, {
+    fetch(`${endpoint}?action=upsertRow`, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify({ action: 'appendRow', tabName: 'Users', rowData: [
-        u.id, u.name, u.email, '-', u.role, u.hospitalId,
-        'TRUE', u.role === 'SUPERADMIN' ? 'TRUE' : 'FALSE', 'TRUE',
-        now, 'Firebase Auth', now, now
-      ]}),
+      body: JSON.stringify({
+        action: 'upsertRow',
+        tabName: 'Users',
+        matchColumn: 'Email',  // deduplicate on Email column
+        rowData: [
+          u.id, u.name, u.email, '-', u.role, u.hospitalId,
+          'TRUE', u.role === 'SUPERADMIN' ? 'TRUE' : 'FALSE', 'TRUE',
+          now, 'Firebase Auth', now, now
+        ]
+      }),
       redirect: 'follow'
     }).catch(() => {});
   };
