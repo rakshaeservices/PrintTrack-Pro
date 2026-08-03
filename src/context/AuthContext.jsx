@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { auth, googleProvider, signInWithPopup, signOut as firebaseSignOut } from '../firebase';
 
 const AuthContext = createContext();
 
@@ -21,10 +22,11 @@ export const MOCK_USERS = [
 export function AuthProvider({ children }) {
   const [currentUser, setCurrentUser] = useState(() => {
     const saved = localStorage.getItem('printtrack_user');
-    return saved ? JSON.parse(saved) : null; // Default to null to show Google Sign-In Page
+    return saved ? JSON.parse(saved) : null;
   });
 
   const [authLoading, setAuthLoading] = useState(true);
+  const [authError, setAuthError] = useState(null);
   const [authMode, setAuthMode] = useState(() => {
     return localStorage.getItem('printtrack_auth_mode') || 'GOOGLE_OAUTH';
   });
@@ -33,7 +35,7 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     const timer = setTimeout(() => {
       setAuthLoading(false);
-    }, 1200); // Smooth initial brand loading screen
+    }, 1200);
     return () => clearTimeout(timer);
   }, []);
 
@@ -49,12 +51,16 @@ export function AuthProvider({ children }) {
     localStorage.setItem('printtrack_auth_mode', authMode);
   }, [authMode]);
 
-  const loginWithGoogle = (email, name, photoUrl) => {
+  // Actual Firebase Google Sign-In Trigger with OAuth Popup
+  const loginWithFirebaseGoogle = async () => {
     setAuthLoading(true);
-    setTimeout(() => {
-      const lowerEmail = email.toLowerCase().trim();
-      
-      // Auto-assign SUPERADMIN role to softtech.lovejeet@gmail.com
+    setAuthError(null);
+    try {
+      const result = await signInWithPopup(auth, googleProvider);
+      const user = result.user;
+      const lowerEmail = (user.email || '').toLowerCase().trim();
+
+      // Auto-assign RBAC permissions & SUPERADMIN role
       let userRole = 'LOCATION_ADMIN';
       let userHospital = 'h1';
 
@@ -73,25 +79,67 @@ export function AuthProvider({ children }) {
       }
 
       const loggedUser = {
-        id: 'usr_' + Date.now(),
-        name: name || lowerEmail.split('@')[0],
+        id: user.uid,
+        name: user.displayName || lowerEmail.split('@')[0],
         email: lowerEmail,
         role: userRole,
         hospitalId: userHospital,
-        photoUrl: photoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(name || lowerEmail)}&background=2563eb&color=fff`
+        photoUrl: user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName || lowerEmail)}&background=2563eb&color=fff`
       };
 
       setCurrentUser(loggedUser);
+      return loggedUser;
+    } catch (err) {
+      console.error("Firebase Google Auth Error:", err);
+      setAuthError(err.message || "Failed to authenticate with Firebase Google Popup.");
+      throw err;
+    } finally {
       setAuthLoading(false);
-    }, 800);
+    }
   };
 
-  const logout = () => {
+  // Direct Email Fallback Sign-In
+  const loginWithEmailDirect = (email, name) => {
     setAuthLoading(true);
-    setTimeout(() => {
-      setCurrentUser(null);
-      setAuthLoading(false);
-    }, 400);
+    const lowerEmail = email.toLowerCase().trim();
+    
+    let userRole = 'LOCATION_ADMIN';
+    let userHospital = 'h1';
+
+    if (lowerEmail === 'softtech.lovejeet@gmail.com' || lowerEmail.includes('admin')) {
+      userRole = 'SUPERADMIN';
+      userHospital = 'ALL';
+    } else if (lowerEmail.includes('director')) {
+      userRole = 'DIRECTOR';
+      userHospital = 'ALL';
+    } else if (lowerEmail.includes('manager')) {
+      userRole = 'MANAGER';
+      userHospital = 'ALL';
+    } else if (lowerEmail.includes('operator')) {
+      userRole = 'STORE_OPERATOR';
+      userHospital = 'h1';
+    }
+
+    const loggedUser = {
+      id: 'usr_' + Date.now(),
+      name: name || lowerEmail.split('@')[0],
+      email: lowerEmail,
+      role: userRole,
+      hospitalId: userHospital,
+      photoUrl: `https://ui-avatars.com/api/?name=${encodeURIComponent(name || lowerEmail)}&background=2563eb&color=fff`
+    };
+
+    setCurrentUser(loggedUser);
+    setAuthLoading(false);
+  };
+
+  const logout = async () => {
+    setAuthLoading(true);
+    try {
+      await firebaseSignOut(auth);
+    } catch (e) {}
+    setCurrentUser(null);
+    setAuthLoading(false);
   };
 
   const switchRole = (userId) => {
@@ -111,7 +159,9 @@ export function AuthProvider({ children }) {
       currentUser,
       setCurrentUser,
       authLoading,
-      loginWithGoogle,
+      authError,
+      loginWithFirebaseGoogle,
+      loginWithEmailDirect,
       logout,
       switchRole,
       hasPermission,
