@@ -128,7 +128,8 @@ export function AuthProvider({ children }) {
     fetch(`${endpoint}?action=appendRow`, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify({ action: 'appendRow', tabName: 'Users', rowData: userRow })
+      body: JSON.stringify({ action: 'appendRow', tabName: 'Users', rowData: userRow }),
+      redirect: 'follow'
     }).catch(() => {});
   };
 
