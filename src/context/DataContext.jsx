@@ -32,10 +32,7 @@ export function DataProvider({ children }) {
     if (envUrl && envUrl.startsWith('http')) {
       return envUrl;
     }
-    if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
-      return envUrl || 'https://script.google.com/macros/s/AKfycbxYOUR_DEPLOYED_ID_HERE/exec';
-    }
-    return 'http://localhost/printtrack/api/index.php';
+    return 'https://script.google.com/macros/s/AKfycbzEvndxwKutCuS06LvDQb_Iu0KcutInJTdGxQ6P-BtlbbNRcfSPdyD1QcQ9J4WK73HlCw/exec';
   };
 
   // Fetch all 12 tabs live from Google Sheet API backend

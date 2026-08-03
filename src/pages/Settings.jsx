@@ -8,7 +8,7 @@ export default function Settings() {
     return import.meta.env.VITE_GOOGLE_SHEET_ID || '1YTo31A2Uyt6RpI1fV_mgDbwbTbR2jVW3YvJLZ-kGBcA';
   });
   const [googleSheetsApiUrl, setGoogleSheetsApiUrl] = useState(() => {
-    return localStorage.getItem('pt_sheets_url') || import.meta.env.VITE_APPS_SCRIPT_URL || 'https://script.google.com/macros/s/AKfycbxYOUR_DEPLOYED_ID_HERE/exec';
+    return localStorage.getItem('pt_sheets_url') || import.meta.env.VITE_APPS_SCRIPT_URL || 'https://script.google.com/macros/s/AKfycbzEvndxwKutCuS06LvDQb_Iu0KcutInJTdGxQ6P-BtlbbNRcfSPdyD1QcQ9J4WK73HlCw/exec';
   });
 
   const saveSettings = () => {
