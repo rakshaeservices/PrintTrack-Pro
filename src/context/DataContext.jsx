@@ -22,13 +22,25 @@ export function DataProvider({ children }) {
 
   const [isLiveConnected, setIsLiveConnected] = useState(false);
 
+  const getApiEndpoint = () => {
+    const customUrl = localStorage.getItem('pt_sheets_url');
+    if (customUrl && customUrl.startsWith('http')) {
+      return customUrl;
+    }
+    // If on Netlify / Cloud domain, fallback to custom Apps Script or relative API endpoint
+    if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+      return customUrl || 'https://script.google.com/macros/s/AKfycbxYOUR_DEPLOYED_ID_HERE/exec';
+    }
+    return 'http://localhost/printtrack/api/index.php';
+  };
+
   // Fetch all 12 tabs live from Google Sheet API backend
   const fetchLiveSheetData = async () => {
     setLoadingMessage('Fetching Live 12-Tab Data from Google Sheet Database...');
     setLoading(true);
     try {
-      // Local PHP backend using adopted Solar credentials
-      const res = await fetch('http://localhost/printtrack/api/index.php?action=fetchAll');
+      const endpoint = getApiEndpoint();
+      const res = await fetch(`${endpoint}?action=fetchAllData`);
       if (res.ok) {
         const json = await res.json();
         if (json.status === 'success' && json.data) {
@@ -87,8 +99,9 @@ export function DataProvider({ children }) {
     };
     setAuditLogs(prev => [log, ...prev]);
 
-    // Async push to backend
-    fetch('http://localhost/printtrack/api/index.php?action=appendRow', {
+    // Push to configured backend endpoint
+    const endpoint = getApiEndpoint();
+    fetch(`${endpoint}?action=appendRow`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ tabName: 'AuditLog', rowData: Object.values(log) })
