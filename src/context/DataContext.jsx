@@ -103,12 +103,12 @@ export function DataProvider({ children }) {
     };
     setAuditLogs(prev => [log, ...prev]);
 
-    // Push to configured backend endpoint
+    // Push to configured backend endpoint with text/plain to bypass Google Apps Script CORS preflight check
     const endpoint = getApiEndpoint();
     fetch(`${endpoint}?action=appendRow`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ tabName: 'AuditLog', rowData: Object.values(log) })
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ action: 'appendRow', tabName: 'AuditLog', rowData: Object.values(log) })
     }).catch(() => {});
   };
 
