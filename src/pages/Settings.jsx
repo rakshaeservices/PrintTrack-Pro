@@ -4,9 +4,11 @@ import { useAuth } from '../context/AuthContext';
 
 export default function Settings() {
   const { authMode, setAuthMode } = useAuth();
-  const [googleSheetId, setGoogleSheetId] = useState('1YTo31A2Uyt6RpI1fV_mgDbwbTbR2jVW3YvJLZ-kGBcA');
+  const [googleSheetId, setGoogleSheetId] = useState(() => {
+    return import.meta.env.VITE_GOOGLE_SHEET_ID || '1YTo31A2Uyt6RpI1fV_mgDbwbTbR2jVW3YvJLZ-kGBcA';
+  });
   const [googleSheetsApiUrl, setGoogleSheetsApiUrl] = useState(() => {
-    return localStorage.getItem('pt_sheets_url') || 'https://script.google.com/macros/s/AKfycbxYOUR_DEPLOYED_ID_HERE/exec';
+    return localStorage.getItem('pt_sheets_url') || import.meta.env.VITE_APPS_SCRIPT_URL || 'https://script.google.com/macros/s/AKfycbxYOUR_DEPLOYED_ID_HERE/exec';
   });
 
   const saveSettings = () => {

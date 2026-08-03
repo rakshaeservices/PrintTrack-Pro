@@ -24,12 +24,16 @@ export function DataProvider({ children }) {
 
   const getApiEndpoint = () => {
     const customUrl = localStorage.getItem('pt_sheets_url');
+    const envUrl = import.meta.env.VITE_APPS_SCRIPT_URL;
+
     if (customUrl && customUrl.startsWith('http')) {
       return customUrl;
     }
-    // If on Netlify / Cloud domain, fallback to custom Apps Script or relative API endpoint
+    if (envUrl && envUrl.startsWith('http')) {
+      return envUrl;
+    }
     if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
-      return customUrl || 'https://script.google.com/macros/s/AKfycbxYOUR_DEPLOYED_ID_HERE/exec';
+      return envUrl || 'https://script.google.com/macros/s/AKfycbxYOUR_DEPLOYED_ID_HERE/exec';
     }
     return 'http://localhost/printtrack/api/index.php';
   };
