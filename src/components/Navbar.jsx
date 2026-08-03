@@ -1,9 +1,12 @@
 import React from 'react';
 import { Printer, Shield, LogOut, Menu, X } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useData } from '../context/DataContext';
 
 export default function Navbar({ isMobileMenuOpen, setIsMobileMenuOpen }) {
   const { currentUser, switchRole, mockUsers, logout } = useAuth();
+
+  const { pendingOfflineQueue, syncOfflineQueue } = useData();
 
   return (
     <header className="glass-header">
@@ -48,8 +51,19 @@ export default function Navbar({ isMobileMenuOpen, setIsMobileMenuOpen }) {
           </div>
         </div>
 
-        {/* Right: User Avatar, Role Switcher & Logout */}
+        {/* Right: User Avatar, Role Switcher, Offline Sync & Logout */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+
+          {pendingOfflineQueue.length > 0 && (
+            <button
+              onClick={syncOfflineQueue}
+              className="badge badge-warning"
+              style={{ cursor: 'pointer', border: '1px solid rgba(245, 158, 11, 0.5)', fontSize: '0.65rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}
+              title="Click to Sync Pending Offline Saved Data to Google Sheets"
+            >
+              <span>⚡ Sync ({pendingOfflineQueue.length}) Offline</span>
+            </button>
+          )}
           
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', background: 'var(--bg-card)', padding: '0.15rem 0.4rem', borderRadius: 'var(--clm-radius-sm)', border: '1px solid var(--border-color)' }}>
             {currentUser?.photoUrl && (

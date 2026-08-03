@@ -113,10 +113,64 @@ export function DataProvider({ children }) {
     }).catch(() => {});
   };
 
-  // Direct append helper to push any tab row directly to Google Sheets
-  const saveToSheet = async (tabName, rowData) => {
+  const [pendingOfflineQueue, setPendingOfflineQueue] = useState(() => {
+    const saved = localStorage.getItem('pt_pending_offline_queue');
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  useEffect(() => {
+    localStorage.setItem('pt_pending_offline_queue', JSON.stringify(pendingOfflineQueue));
+  }, [pendingOfflineQueue]);
+
+  // Sync offline queued rows when network comes back online
+  const syncOfflineQueue = async () => {
+    if (pendingOfflineQueue.length === 0) return;
     const endpoint = getApiEndpoint();
     if (!endpoint || endpoint.includes('YOUR_DEPLOYED_ID_HERE')) return;
+
+    setLoadingMessage(`Syncing ${pendingOfflineQueue.length} Offline Saved Records to Google Sheets...`);
+    setLoading(true);
+
+    try {
+      const remainingQueue = [];
+      for (const item of pendingOfflineQueue) {
+        try {
+          await fetch(`${endpoint}?action=appendRow`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify({ action: 'appendRow', tabName: item.tabName, rowData: item.rowData }),
+            redirect: 'follow'
+          });
+        } catch (err) {
+          remainingQueue.push(item);
+        }
+      }
+      setPendingOfflineQueue(remainingQueue);
+      fetchLiveSheetData();
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Auto-trigger sync when device comes online
+  useEffect(() => {
+    const handleOnline = () => {
+      syncOfflineQueue();
+    };
+    window.addEventListener('online', handleOnline);
+    return () => window.removeEventListener('online', handleOnline);
+  }, [pendingOfflineQueue]);
+
+  // Direct append helper with offline fallback queue support
+  const saveToSheet = async (tabName, rowData) => {
+    const endpoint = getApiEndpoint();
+    const payload = { tabName, rowData, timestamp: Date.now() };
+
+    if (!navigator.onLine || !endpoint || endpoint.includes('YOUR_DEPLOYED_ID_HERE')) {
+      setPendingOfflineQueue(prev => [...prev, payload]);
+      return;
+    }
+
     try {
       await fetch(`${endpoint}?action=appendRow`, {
         method: 'POST',
@@ -124,10 +178,10 @@ export function DataProvider({ children }) {
         body: JSON.stringify({ action: 'appendRow', tabName: tabName, rowData: rowData }),
         redirect: 'follow'
       });
-      // Re-fetch live data to ensure Google Sheet is single source of truth
       fetchLiveSheetData();
     } catch (err) {
-      console.log('Sheet Save Error:', err);
+      console.log('Network error. Adding record to Offline Sync Queue:', err);
+      setPendingOfflineQueue(prev => [...prev, payload]);
     }
   };
 
@@ -175,6 +229,8 @@ export function DataProvider({ children }) {
       monthlyPeriods, setMonthlyPeriods,
       addAuditLog,
       saveToSheet,
+      pendingOfflineQueue,
+      syncOfflineQueue,
       calculateHospitalStock
     }}>
       {children}
