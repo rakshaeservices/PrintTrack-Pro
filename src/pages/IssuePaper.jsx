@@ -4,13 +4,17 @@ import { useData } from '../context/DataContext';
 import { useAuth } from '../context/AuthContext';
 
 export default function IssuePaper() {
-  const { stockLedger, setStockLedger, hospitals, counters, paperTypes, triggerServerAction, addAuditLog, calculateHospitalStock } = useData();
+  const { stockLedger, setStockLedger, issueRegister, setIssueRegister, hospitals, counters, paperTypes, triggerServerAction, addAuditLog, calculateHospitalStock, saveToSheet } = useData();
   const { currentUser } = useAuth();
   
+  // BUG-04 fix: use HospitalID || id for live data
+  const firstHospitalId = hospitals[0]?.HospitalID || hospitals[0]?.id || '';
+  const firstCounterId  = counters[0]?.CounterID  || counters[0]?.id  || '';
+
   const [formData, setFormData] = useState({
     issueDate: new Date().toISOString().split('T')[0],
-    hospitalId: hospitals[0]?.id || '',
-    counterId: counters[0]?.id || '',
+    hospitalId: firstHospitalId,
+    counterId: firstCounterId,
     paperType: 'A4 500',
     qty: 8,
     remarks: 'Monthly Counter Requisition'
@@ -18,7 +22,8 @@ export default function IssuePaper() {
 
   const [lastIssuedSuccess, setLastIssuedSuccess] = useState(false);
 
-  const selectedHospitalCounters = counters.filter(c => c.hospitalId === formData.hospitalId);
+  // BUG-04 fix: filter counters using HospitalID || hospitalId
+  const selectedHospitalCounters = counters.filter(c => (c.HospitalID || c.hospitalId) === formData.hospitalId);
   const { totalStock } = calculateHospitalStock(formData.hospitalId);
 
   const handleIssuePaperSubmit = async (e) => {
@@ -29,35 +34,65 @@ export default function IssuePaper() {
     }
 
     await triggerServerAction(async () => {
-      const selH = hospitals.find(h => h.id === formData.hospitalId);
-      const selC = counters.find(c => c.id === formData.counterId);
+      // BUG-04 fix: lookup by HospitalID || id
+      const selH = hospitals.find(h => (h.HospitalID || h.id) === formData.hospitalId);
+      const selC = counters.find(c => (c.CounterID || c.id) === formData.counterId);
+      const now  = new Date().toISOString().replace('T', ' ').substring(0, 19);
+      const issueId  = 'ISS-' + Date.now();
+      const ledgerId = 'SL-' + Date.now();
+
+      const hospitalName = selH ? (selH.HospitalName || selH.name || 'Hospital') : 'Hospital';
+      const counterName  = selC ? (selC.CounterName  || selC.name  || 'Counter')  : 'Counter';
 
       const issueLedgerEntry = {
-        id: 'st' + Date.now(),
+        id: ledgerId,
+        LedgerID: ledgerId,
         date: formData.issueDate,
+        HospitalID: formData.hospitalId,
         hospitalId: formData.hospitalId,
-        hospitalName: selH ? selH.name : 'Hospital',
+        hospitalName,
+        TransactionType: 'Issued',
         type: 'Issued',
+        PaperType: formData.paperType,
         paperType: formData.paperType,
+        QuantityIn: 0,
+        QuantityOut: parseInt(formData.qty),
         qty: parseInt(formData.qty),
-        counterName: selC ? selC.name : 'Counter',
-        remarks: formData.remarks
+        CounterID: formData.counterId,
+        counterName,
+        Remarks: formData.remarks,
+        remarks: formData.remarks,
+        CreatedOn: now
       };
 
       setStockLedger([issueLedgerEntry, ...stockLedger]);
+
+      // BUG-09 fix: persist to StockLedger!A:L AND IssueRegister!A:M
+      await saveToSheet('StockLedger', [
+        ledgerId, formData.hospitalId, formData.issueDate,
+        'Issued', formData.paperType, 0, parseInt(formData.qty),
+        formData.counterId, formData.remarks, currentUser.email, now, now
+      ]);
+      await saveToSheet('IssueRegister', [
+        issueId, formData.issueDate, formData.hospitalId,
+        formData.counterId, formData.paperType, parseInt(formData.qty),
+        totalStock - parseInt(formData.qty),
+        'Approved', currentUser.email, formData.remarks, now, now, now
+      ]);
+
       addAuditLog(
         currentUser.email,
         'Issue Paper to Counter',
         `Stock: ${totalStock} Rims`,
-        `Issued ${formData.qty} Rims of ${formData.paperType} to ${issueLedgerEntry.hospitalName} - ${issueLedgerEntry.counterName}`
+        `Issued ${formData.qty} Rims of ${formData.paperType} to ${hospitalName} - ${counterName}`
       );
 
       setLastIssuedSuccess(true);
       setTimeout(() => setLastIssuedSuccess(false), 4000);
       setFormData({
         issueDate: new Date().toISOString().split('T')[0],
-        hospitalId: hospitals[0]?.id || '',
-        counterId: counters[0]?.id || '',
+        hospitalId: firstHospitalId,
+        counterId: firstCounterId,
         paperType: 'A4 500',
         qty: 8,
         remarks: 'Monthly Counter Requisition'

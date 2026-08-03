@@ -1,23 +1,34 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { auth, googleProvider, signInWithPopup, signOut as firebaseSignOut } from '../firebase';
+import { auth, googleProvider, signInWithPopup, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut as firebaseSignOut } from '../firebase';
 
 const AuthContext = createContext();
 
 export const ROLES = {
-  SUPERADMIN: { name: 'Super Admin', permissions: ['all'] },
-  DIRECTOR: { name: 'Director', permissions: ['view_dashboard', 'view_reports', 'export'] },
-  MANAGER: { name: 'Manager', permissions: ['view_dashboard', 'view_readings', 'edit_unlocked', 'verify_readings', 'view_stock', 'view_reports'] },
-  LOCATION_ADMIN: { name: 'Location Admin', permissions: ['view_hospital_data', 'verify_readings', 'view_stock', 'view_reports'] },
-  STORE_OPERATOR: { name: 'Store Operator', permissions: ['issue_paper', 'enter_readings', 'view_stock'] }
+  SUPERADMIN:     { name: 'Super Admin',     permissions: ['all'] },
+  DIRECTOR:       { name: 'Director',        permissions: ['view_dashboard', 'view_reports', 'export'] },
+  MANAGER:        { name: 'Manager',         permissions: ['view_dashboard', 'view_readings', 'edit_unlocked', 'verify_readings', 'view_stock', 'view_reports'] },
+  LOCATION_ADMIN: { name: 'Location Admin',  permissions: ['view_hospital_data', 'verify_readings', 'view_stock', 'view_reports'] },
+  STORE_OPERATOR: { name: 'Store Operator',  permissions: ['issue_paper', 'enter_readings', 'view_stock'] }
 };
 
-export const MOCK_USERS = [
-  { id: 'u1', name: 'Lovejeet (Super Admin)', email: 'softtech.lovejeet@gmail.com', role: 'SUPERADMIN', hospitalId: 'ALL' },
-  { id: 'u2', name: 'Executive Director', email: 'director@printtrack.com', role: 'DIRECTOR', hospitalId: 'ALL' },
-  { id: 'u3', name: 'Operations Manager', email: 'manager@printtrack.com', role: 'MANAGER', hospitalId: 'ALL' },
-  { id: 'u4', name: 'UMMED Location Admin', email: 'admin.ummed@printtrack.com', role: 'LOCATION_ADMIN', hospitalId: 'h1' },
-  { id: 'u5', name: 'Store Operator', email: 'operator@printtrack.com', role: 'STORE_OPERATOR', hospitalId: 'h1' }
+// ─── AUTHORIZED USER ALLOWLIST ────────────────────────────────────────────────
+// ONLY these emails can login. All others are blocked.
+// SUPERADMIN can add new users from UserManagement page.
+export const AUTHORIZED_USERS = [
+  // ── Real Registered Users ─────────────────────────────────────────────────
+  { email: 'softtech.lovejeet@gmail.com', role: 'SUPERADMIN',     hospitalId: 'ALL',   name: 'Lovejeet Singh',      type: 'registered' },
+
+  // ── Demo Accounts (one per role — for testing & onboarding only) ──────────
+  { email: 'demo.director@gmail.com',     role: 'DIRECTOR',       hospitalId: 'ALL',   name: 'Demo Director',       type: 'demo' },
+  { email: 'demo.manager@gmail.com',      role: 'MANAGER',        hospitalId: 'ALL',   name: 'Demo Manager',        type: 'demo' },
+  { email: 'demo.admin@gmail.com',        role: 'LOCATION_ADMIN', hospitalId: 'UMMED', name: 'Demo Location Admin', type: 'demo' },
+  { email: 'demo.operator@gmail.com',     role: 'STORE_OPERATOR', hospitalId: 'UMMED', name: 'Demo Operator',       type: 'demo' },
 ];
+
+// Legacy export used by Navbar role switcher (SUPERADMIN only sees this)
+export const MOCK_USERS = AUTHORIZED_USERS.map((u, i) => ({ id: `u${i + 1}`, ...u }));
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 export function AuthProvider({ children }) {
   const [currentUser, setCurrentUser] = useState(() => {
@@ -26,16 +37,13 @@ export function AuthProvider({ children }) {
   });
 
   const [authLoading, setAuthLoading] = useState(true);
-  const [authError, setAuthError] = useState(null);
-  const [authMode, setAuthMode] = useState(() => {
+  const [authError,   setAuthError]   = useState(null);
+  const [authMode,    setAuthMode]    = useState(() => {
     return localStorage.getItem('printtrack_auth_mode') || 'GOOGLE_OAUTH';
   });
 
-  // Initial App Loading State Effect
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setAuthLoading(false);
-    }, 1200);
+    const timer = setTimeout(() => setAuthLoading(false), 1200);
     return () => clearTimeout(timer);
   }, []);
 
@@ -51,162 +59,143 @@ export function AuthProvider({ children }) {
     localStorage.setItem('printtrack_auth_mode', authMode);
   }, [authMode]);
 
-  // Actual Firebase Google Sign-In Trigger with OAuth Popup
+  // ── Check email against allowlist ──────────────────────────────────────────
+  const getAuthorizedProfile = (email) => {
+    const lowerEmail = (email || '').toLowerCase().trim();
+    return AUTHORIZED_USERS.find(u => u.email === lowerEmail) || null;
+  };
+
+  // ── Google Sign-In ─────────────────────────────────────────────────────────
   const loginWithFirebaseGoogle = async () => {
     setAuthLoading(true);
     setAuthError(null);
     try {
       const result = await signInWithPopup(auth, googleProvider);
-      const user = result.user;
+      const user   = result.user;
       const lowerEmail = (user.email || '').toLowerCase().trim();
 
-      // Auto-assign RBAC permissions & SUPERADMIN role
-      let userRole = 'LOCATION_ADMIN';
-      let userHospital = 'h1';
-
-      if (lowerEmail === 'softtech.lovejeet@gmail.com' || lowerEmail.includes('admin')) {
-        userRole = 'SUPERADMIN';
-        userHospital = 'ALL';
-      } else if (lowerEmail.includes('director')) {
-        userRole = 'DIRECTOR';
-        userHospital = 'ALL';
-      } else if (lowerEmail.includes('manager')) {
-        userRole = 'MANAGER';
-        userHospital = 'ALL';
-      } else if (lowerEmail.includes('operator')) {
-        userRole = 'STORE_OPERATOR';
-        userHospital = 'h1';
+      // SECURITY: Reject any email not in allowlist
+      const profile = getAuthorizedProfile(lowerEmail);
+      if (!profile) {
+        await firebaseSignOut(auth);
+        const msg = `Access Denied. "${lowerEmail}" is not authorized. Contact your Super Admin.`;
+        setAuthError(msg);
+        throw new Error(msg);
       }
 
       const loggedUser = {
-        id: user.uid,
-        name: user.displayName || lowerEmail.split('@')[0],
-        email: lowerEmail,
-        role: userRole,
-        hospitalId: userHospital,
-        photoUrl: user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName || lowerEmail)}&background=2563eb&color=fff`
+        id:         user.uid,
+        name:       user.displayName || profile.name,
+        email:      lowerEmail,
+        role:       profile.role,
+        hospitalId: profile.hospitalId,
+        photoUrl:   user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.name)}&background=2563eb&color=fff`
       };
 
       setCurrentUser(loggedUser);
-
-      // Sync Firebase User Data directly into Google Sheet Users!A:M tab
       syncUserToSheets(loggedUser);
-
       return loggedUser;
+
     } catch (err) {
-      console.error("Firebase Google Auth Error:", err);
-      setAuthError(err.message || "Failed to authenticate with Firebase Google Popup.");
+      if (!authError) setAuthError(err.message || 'Firebase OAuth failed.');
       throw err;
     } finally {
       setAuthLoading(false);
     }
   };
 
-  const syncUserToSheets = (u) => {
-    const customUrl = localStorage.getItem('pt_sheets_url');
-    const envUrl = import.meta.env.VITE_APPS_SCRIPT_URL;
-    const endpoint = customUrl || envUrl;
-
-    if (!endpoint || endpoint.includes('YOUR_DEPLOYED_ID_HERE')) return;
-
-    const userRow = [
-      u.id,
-      u.name,
-      u.email,
-      '-', // MobileNumber
-      u.role,
-      u.hospitalId,
-      'TRUE', // IsActive
-      u.role === 'SUPERADMIN' ? 'TRUE' : 'FALSE', // CanEditReports
-      'TRUE', // CanExport
-      new Date().toISOString().replace('T', ' ').substring(0, 19), // LastLogin
-      'Firebase Auth System', // CreatedBy
-      new Date().toISOString().replace('T', ' ').substring(0, 19), // CreatedOn
-      new Date().toISOString().replace('T', ' ').substring(0, 19)  // UpdatedOn
-    ];
-
-    fetch(`${endpoint}?action=appendRow`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify({ action: 'appendRow', tabName: 'Users', rowData: userRow }),
-      redirect: 'follow'
-    }).catch(() => {});
-  };
-
-  // Authorized Email & Password Sign-In (Firebase Auth + Fallback)
-  const loginWithEmailPassword = async (email, password, name) => {
+  // ── Email + Password Sign-In ───────────────────────────────────────────────
+  const loginWithEmailPassword = async (email, password) => {
     setAuthLoading(true);
     setAuthError(null);
-    const lowerEmail = email.toLowerCase().trim();
+    const lowerEmail = (email || '').toLowerCase().trim();
 
-    let userRole = 'LOCATION_ADMIN';
-    let userHospital = 'h1';
+    // SECURITY: Check allowlist before even calling Firebase
+    const profile = getAuthorizedProfile(lowerEmail);
+    if (!profile) {
+      const msg = `Access Denied. "${lowerEmail}" is not authorized. Contact your Super Admin.`;
+      setAuthError(msg);
+      setAuthLoading(false);
+      throw new Error(msg);
+    }
 
-    if (lowerEmail === 'softtech.lovejeet@gmail.com' || lowerEmail.includes('admin')) {
-      userRole = 'SUPERADMIN';
-      userHospital = 'ALL';
-    } else if (lowerEmail.includes('director')) {
-      userRole = 'DIRECTOR';
-      userHospital = 'ALL';
-    } else if (lowerEmail.includes('manager')) {
-      userRole = 'MANAGER';
-      userHospital = 'ALL';
-    } else if (lowerEmail.includes('operator')) {
-      userRole = 'STORE_OPERATOR';
-      userHospital = 'h1';
+    if (!password || password.length < 6) {
+      const msg = 'Password must be at least 6 characters.';
+      setAuthError(msg);
+      setAuthLoading(false);
+      throw new Error(msg);
     }
 
     try {
-      // 1. Try Firebase Email/Password Auth
       let firebaseUser = null;
       try {
         const res = await signInWithEmailAndPassword(auth, lowerEmail, password);
         firebaseUser = res.user;
-      } catch (err) {
-        // If user not found, auto-create account forAuthorized users
-        if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential') {
-          try {
-            const newRes = await createUserWithEmailAndPassword(auth, lowerEmail, password);
-            firebaseUser = newRes.user;
-          } catch (createErr) {
-            console.log("Firebase Email Auth fallback to direct logic:", createErr);
-          }
+      } catch (firebaseErr) {
+        // Auto-create account only for authorized users on their first login
+        if (firebaseErr.code === 'auth/user-not-found' || firebaseErr.code === 'auth/invalid-credential') {
+          const newRes = await createUserWithEmailAndPassword(auth, lowerEmail, password);
+          firebaseUser = newRes.user;
+        } else {
+          throw firebaseErr;
         }
       }
 
       const loggedUser = {
-        id: firebaseUser ? firebaseUser.uid : 'usr_' + Date.now(),
-        name: name || (firebaseUser && firebaseUser.displayName) || lowerEmail.split('@')[0],
-        email: lowerEmail,
-        role: userRole,
-        hospitalId: userHospital,
-        photoUrl: `https://ui-avatars.com/api/?name=${encodeURIComponent(name || lowerEmail)}&background=2563eb&color=fff`
+        id:         firebaseUser.uid,
+        name:       firebaseUser.displayName || profile.name,
+        email:      lowerEmail,
+        role:       profile.role,
+        hospitalId: profile.hospitalId,
+        photoUrl:   `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.name)}&background=2563eb&color=fff`
       };
 
       setCurrentUser(loggedUser);
       syncUserToSheets(loggedUser);
       return loggedUser;
+
     } catch (err) {
-      console.error("Email Password Auth Error:", err);
-      setAuthError(err.message || "Failed to authenticate with Email & Password.");
-      throw err;
+      const msg = err.code === 'auth/wrong-password'
+        ? 'Incorrect password. Please try again.'
+        : err.message || 'Authentication failed.';
+      setAuthError(msg);
+      throw new Error(msg);
     } finally {
       setAuthLoading(false);
     }
   };
 
+  // ── Sync to Google Sheets Users tab ───────────────────────────────────────
+  const syncUserToSheets = (u) => {
+    const customUrl = localStorage.getItem('pt_sheets_url');
+    const envUrl    = import.meta.env.VITE_APPS_SCRIPT_URL;
+    // BUG-11 fix: 3-tier fallback
+    const endpoint  = customUrl || envUrl || 'https://script.google.com/macros/s/AKfycbzEvndxwKutCuS06LvDQb_Iu0KcutInJTdGxQ6P-BtlbbNRcfSPdyD1QcQ9J4WK73HlCw/exec';
+    if (!endpoint || endpoint.includes('YOUR_DEPLOYED_ID_HERE')) return;
+
+    const now = new Date().toISOString().replace('T', ' ').substring(0, 19);
+    fetch(`${endpoint}?action=appendRow`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ action: 'appendRow', tabName: 'Users', rowData: [
+        u.id, u.name, u.email, '-', u.role, u.hospitalId,
+        'TRUE', u.role === 'SUPERADMIN' ? 'TRUE' : 'FALSE', 'TRUE',
+        now, 'Firebase Auth', now, now
+      ]}),
+      redirect: 'follow'
+    }).catch(() => {});
+  };
+
   const logout = async () => {
     setAuthLoading(true);
-    try {
-      await firebaseSignOut(auth);
-    } catch (e) {}
+    try { await firebaseSignOut(auth); } catch (e) {}
     setCurrentUser(null);
     setAuthLoading(false);
   };
 
   const switchRole = (userId) => {
     const found = MOCK_USERS.find(u => u.id === userId);
-    if (found) setCurrentUser(found);
+    if (found) setCurrentUser({ ...currentUser, role: found.role, hospitalId: found.hospitalId });
   };
 
   const hasPermission = (perm) => {
@@ -222,6 +211,7 @@ export function AuthProvider({ children }) {
       setCurrentUser,
       authLoading,
       authError,
+      authorizedUsers: AUTHORIZED_USERS,
       loginWithFirebaseGoogle,
       loginWithEmailPassword,
       logout,

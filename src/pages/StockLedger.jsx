@@ -4,13 +4,15 @@ import { useData } from '../context/DataContext';
 import { useAuth } from '../context/AuthContext';
 
 export default function StockLedger() {
-  const { stockLedger, setStockLedger, hospitals, paperTypes, calculateHospitalStock, triggerServerAction, addAuditLog } = useData();
+  const { stockLedger, setStockLedger, hospitals, paperTypes, calculateHospitalStock, triggerServerAction, addAuditLog, saveToSheet } = useData();
   const { currentUser, hasPermission } = useAuth();
   
-  const [selectedHospitalFilter, setSelectedHospitalFilter] = useState('h1');
+  // BUG-03 fix: use live hospital ID, not hardcoded 'h1'
+  const firstHospitalId = hospitals[0]?.HospitalID || hospitals[0]?.id || '';
+  const [selectedHospitalFilter, setSelectedHospitalFilter] = useState(firstHospitalId || 'ALL');
   const [showModal, setShowModal] = useState(false);
   const [formData, setFormData] = useState({
-    hospitalId: 'h1',
+    hospitalId: firstHospitalId,
     type: 'Purchase',
     paperType: 'A4 500',
     qty: 50,
@@ -18,28 +20,55 @@ export default function StockLedger() {
   });
 
   const { totalStock, totalPurchased, totalIssued } = calculateHospitalStock(selectedHospitalFilter);
-  const filteredLedgers = stockLedger.filter(l => l.hospitalId === selectedHospitalFilter);
+  // BUG-18 fix: match both HospitalID (live) and hospitalId (legacy) field names
+  const filteredLedgers = stockLedger.filter(l => (l.HospitalID || l.hospitalId) === selectedHospitalFilter);
 
   const handleAddTransaction = async (e) => {
     e.preventDefault();
     await triggerServerAction(async () => {
-      const selH = hospitals.find(h => h.id === formData.hospitalId);
+      // BUG-03 fix: lookup by HospitalID || id
+      const selH = hospitals.find(h => (h.HospitalID || h.id) === formData.hospitalId);
+      const now = new Date().toISOString().replace('T', ' ').substring(0, 19);
+      const ledgerId = 'SL-' + Date.now();
       const newEntry = {
-        id: 'st' + Date.now(),
-        date: new Date().toISOString().split('T')[0],
+        id: ledgerId,
+        LedgerID: ledgerId,
+        date: now.split(' ')[0],
+        HospitalID: formData.hospitalId,
         hospitalId: formData.hospitalId,
-        hospitalName: selH ? selH.name : 'Hospital',
+        hospitalName: selH ? (selH.HospitalName || selH.name || 'Hospital') : 'Hospital',
+        TransactionType: formData.type,
         type: formData.type,
+        PaperType: formData.paperType,
         paperType: formData.paperType,
+        QuantityIn: formData.type !== 'Issued' ? parseInt(formData.qty) : 0,
+        QuantityOut: formData.type === 'Issued' ? parseInt(formData.qty) : 0,
         qty: parseInt(formData.qty),
         counterName: '-',
-        remarks: formData.remarks
+        Remarks: formData.remarks,
+        remarks: formData.remarks,
+        CreatedOn: now
       };
 
       setStockLedger([newEntry, ...stockLedger]);
+      // BUG-10 fix: persist to StockLedger!A:L (12 columns)
+      await saveToSheet('StockLedger', [
+        ledgerId,
+        formData.hospitalId,
+        now.split(' ')[0],
+        formData.type,
+        formData.paperType,
+        formData.type !== 'Issued' ? parseInt(formData.qty) : 0,
+        formData.type === 'Issued' ? parseInt(formData.qty) : 0,
+        '-',
+        formData.remarks,
+        currentUser.email,
+        now,
+        now
+      ]);
       addAuditLog(currentUser.email, `Stock Movement (${formData.type})`, '-', `${newEntry.hospitalName} - ${formData.type} ${formData.qty} Rims of ${formData.paperType}`);
       setShowModal(false);
-    }, 'Processing Stock Transaction...');
+    }, 'Processing Stock Transaction & Saving to StockLedger!A:L...');
   };
 
   return (

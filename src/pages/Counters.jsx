@@ -4,28 +4,32 @@ import { useData } from '../context/DataContext';
 import { useAuth } from '../context/AuthContext';
 
 export default function Counters() {
-  const { counters, setCounters, hospitals, triggerServerAction, addAuditLog } = useData();
+  const { counters, setCounters, hospitals, triggerServerAction, addAuditLog, saveToSheet } = useData();
   const { currentUser, hasPermission } = useAuth();
   const [selectedHospitalFilter, setSelectedHospitalFilter] = useState('ALL');
   const [showModal, setShowModal] = useState(false);
   const [editingCounter, setEditingCounter] = useState(null);
 
+  // BUG-14 fix: use HospitalID (live schema) with .id fallback
+  const firstHospitalId = hospitals[0]?.HospitalID || hospitals[0]?.id || '';
+
   const [formData, setFormData] = useState({
-    hospitalId: hospitals[0]?.id || '',
+    hospitalId: firstHospitalId,
     name: '',
     printerModel: 'Canon IR 2925',
     serialNo: '',
     status: 'Active'
   });
 
+  // BUG-02 fix: match both HospitalID and hospitalId field names from live data
   const filteredCounters = selectedHospitalFilter === 'ALL'
     ? counters
-    : counters.filter(c => c.hospitalId === selectedHospitalFilter);
+    : counters.filter(c => (c.HospitalID || c.hospitalId) === selectedHospitalFilter);
 
   const openAddModal = () => {
     setEditingCounter(null);
     setFormData({
-      hospitalId: hospitals[0]?.id || '',
+      hospitalId: hospitals[0]?.HospitalID || hospitals[0]?.id || '',
       name: '',
       printerModel: 'Canon IR 2925',
       serialNo: '',
@@ -36,12 +40,13 @@ export default function Counters() {
 
   const openEditModal = (counter) => {
     setEditingCounter(counter);
+    // BUG-19 fix: use HospitalID || hospitalId for edit modal
     setFormData({
-      hospitalId: counter.hospitalId,
-      name: counter.name,
-      printerModel: counter.printerModel,
-      serialNo: counter.serialNo,
-      status: counter.status || 'Active'
+      hospitalId: counter.HospitalID || counter.hospitalId || '',
+      name: counter.CounterName || counter.name || '',
+      printerModel: counter.PrinterModel || counter.printerModel || '',
+      serialNo: counter.SerialNo || counter.serialNo || '',
+      status: counter.IsActive === 'TRUE' ? 'Active' : (counter.status || 'Active')
     });
     setShowModal(true);
   };
@@ -49,26 +54,35 @@ export default function Counters() {
   const handleSaveCounter = async (e) => {
     e.preventDefault();
     await triggerServerAction(async () => {
-      const selectedH = hospitals.find(h => h.id === formData.hospitalId);
-      const hospitalName = selectedH ? selectedH.name : 'Hospital';
+      // BUG-02 fix: use HospitalID || id for lookup
+      const selectedH = hospitals.find(h => (h.HospitalID || h.id) === formData.hospitalId);
+      const hospitalName = selectedH ? (selectedH.HospitalName || selectedH.name || 'Hospital') : 'Hospital';
+      const now = new Date().toISOString().replace('T', ' ').substring(0, 19);
 
       if (editingCounter) {
         // Edit Existing Counter
         setCounters(counters.map(c => {
-          if (c.id === editingCounter.id) {
+          const cId = c.CounterID || c.id;
+          const eId = editingCounter.CounterID || editingCounter.id;
+          if (cId === eId) {
             const updated = {
               ...c,
+              HospitalID: formData.hospitalId,
               hospitalId: formData.hospitalId,
               hospitalName,
+              CounterName: formData.name,
               name: formData.name,
+              PrinterModel: formData.printerModel,
               printerModel: formData.printerModel,
+              SerialNo: formData.serialNo,
               serialNo: formData.serialNo,
+              IsActive: formData.status === 'Active' ? 'TRUE' : 'FALSE',
               status: formData.status
             };
             addAuditLog(
               currentUser.email,
               'Edit Counter Printer Details',
-              `${c.name} (${c.printerModel})`,
+              `${c.CounterName || c.name} (${c.PrinterModel || c.printerModel})`,
               `${updated.name} (${updated.printerModel}) [Status: ${updated.status}]`
             );
             return updated;
@@ -76,23 +90,45 @@ export default function Counters() {
           return c;
         }));
       } else {
-        // Create New Counter
+        // BUG-07 fix: Create New Counter + saveToSheet to Counters!A:J
+        const counterId = 'CTR-' + Date.now();
         const newC = {
-          id: 'c' + (counters.length + 1),
+          id: counterId,
+          CounterID: counterId,
+          HospitalID: formData.hospitalId,
           hospitalId: formData.hospitalId,
           hospitalName,
+          CounterName: formData.name,
           name: formData.name,
+          PrinterModel: formData.printerModel,
           printerModel: formData.printerModel,
+          SerialNo: formData.serialNo || `SN-${Date.now().toString().slice(-4)}`,
           serialNo: formData.serialNo || `SN-${Date.now().toString().slice(-4)}`,
-          status: formData.status
+          IsActive: 'TRUE',
+          status: formData.status,
+          CreatedOn: now,
+          UpdatedOn: now
         };
-        setCounters([...counters, newC]);
-        addAuditLog(currentUser.email, 'Add Counter Printer', '-', `${newC.hospitalName} - ${newC.name} (${newC.printerModel})`);
+        setCounters([newC, ...counters]);
+        // Persist to Counters!A:J Google Sheet (10 columns)
+        await saveToSheet('Counters', [
+          counterId,           // CounterID
+          formData.hospitalId, // HospitalID
+          formData.name,       // CounterName
+          formData.printerModel, // PrinterModel
+          newC.SerialNo,       // SerialNo
+          'A4',                // PaperSize
+          'TRUE',              // IsActive
+          now,                 // InstalledDate
+          now,                 // CreatedOn
+          now                  // UpdatedOn
+        ]);
+        addAuditLog(currentUser.email, 'Add Counter Printer', '-', `${hospitalName} - ${newC.name} (${newC.printerModel})`);
       }
 
       setShowModal(false);
       setEditingCounter(null);
-    }, editingCounter ? 'Updating Printer Details & Audit Trail...' : 'Registering Printer Counter...');
+    }, editingCounter ? 'Updating Printer Details & Audit Trail...' : 'Registering Printer Counter to Counters!A:J...');
   };
 
   return (
@@ -122,7 +158,7 @@ export default function Counters() {
         >
           <option value="ALL">All Hospitals ({counters.length} Printers)</option>
           {hospitals.map(h => (
-            <option key={h.id} value={h.id}>{h.name}</option>
+            <option key={h.HospitalID || h.id} value={h.HospitalID || h.id}>{h.HospitalName || h.name}</option>
           ))}
         </select>
       </div>
@@ -189,7 +225,7 @@ export default function Counters() {
                     onChange={e => setFormData({ ...formData, hospitalId: e.target.value })}
                   >
                     {hospitals.map(h => (
-                      <option key={h.id} value={h.id}>{h.name}</option>
+                      <option key={h.HospitalID || h.id} value={h.HospitalID || h.id}>{h.HospitalName || h.name}</option>
                     ))}
                   </select>
                 </div>
