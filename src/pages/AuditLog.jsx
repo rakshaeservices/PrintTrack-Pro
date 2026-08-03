@@ -29,21 +29,32 @@ export default function AuditLog() {
             </tr>
           </thead>
           <tbody>
-            {auditLogs.map(log => (
-              <tr key={log.id}>
-                <td style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{log.datetime}</td>
-                <td style={{ fontWeight: 600, color: 'var(--accent)' }}>{log.user}</td>
-                <td>
-                  <span className={`badge ${log.action.includes('Unlock') ? 'badge-danger' : 'badge-secondary'}`}>
-                    {log.action}
-                  </span>
+            {auditLogs.length === 0 ? (
+              <tr>
+                <td colSpan="7" style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '1.5rem' }}>
+                  No audit trail records found.
                 </td>
-                <td style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>{log.oldValue}</td>
-                <td style={{ fontWeight: 600, color: '#fff', fontSize: '0.75rem' }}>{log.newValue}</td>
-                <td><code style={{ fontSize: '0.725rem' }}>{log.ip}</code></td>
-                <td style={{ fontSize: '0.725rem', color: 'var(--text-muted)' }}>{log.browser}</td>
               </tr>
-            ))}
+            ) : (
+              auditLogs.map((log, idx) => {
+                const actionText = String(log.Action || log.action || '-');
+                return (
+                  <tr key={log.AuditID || log.id || idx}>
+                    <td style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{log.DateTime || log.datetime || '-'}</td>
+                    <td style={{ fontWeight: 600, color: 'var(--accent)' }}>{log.UserID || log.user || '-'}</td>
+                    <td>
+                      <span className={`badge ${actionText.includes('Unlock') ? 'badge-danger' : 'badge-secondary'}`}>
+                        {actionText}
+                      </span>
+                    </td>
+                    <td style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>{log.OldValue || log.oldValue || '-'}</td>
+                    <td style={{ fontWeight: 600, color: '#fff', fontSize: '0.75rem' }}>{log.NewValue || log.newValue || '-'}</td>
+                    <td><code style={{ fontSize: '0.725rem' }}>{log.IPAddress || log.ip || '127.0.0.1'}</code></td>
+                    <td style={{ fontSize: '0.725rem', color: 'var(--text-muted)' }}>{log.Browser || log.browser || 'PWA Web App'}</td>
+                  </tr>
+                );
+              })
+            )}
           </tbody>
         </table>
       </div>
