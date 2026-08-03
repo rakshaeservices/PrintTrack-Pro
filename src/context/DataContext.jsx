@@ -44,25 +44,28 @@ export function DataProvider({ children }) {
     setLoading(true);
     try {
       const endpoint = getApiEndpoint();
-      const res = await fetch(`${endpoint}?action=fetchAllData`);
-      if (res.ok) {
-        const json = await res.json();
-        if (json.status === 'success' && json.data) {
-          const d = json.data;
-          if (d.users) setUsers(d.users);
-          if (d.hospitals) setHospitals(d.hospitals);
-          if (d.counters) setCounters(d.counters);
-          if (d.paperTypes) setPaperTypes(d.paperTypes);
-          if (d.monthlyReadings) setMonthlyReadings(d.monthlyReadings);
-          if (d.stock) setStock(d.stock);
-          if (d.stockLedger) setStockLedger(d.stockLedger);
-          if (d.issueRegister) setIssueRegister(d.issueRegister);
-          if (d.permissions) setPermissions(d.permissions);
-          if (d.auditLog) setAuditLogs(d.auditLog);
-          if (d.settings) setSettings(d.settings);
-          if (d.monthlyPeriods) setMonthlyPeriods(d.monthlyPeriods);
+      // Only fetch if a real deployed Apps Script URL or local PHP endpoint is present
+      if (endpoint && !endpoint.includes('YOUR_DEPLOYED_ID_HERE')) {
+        const res = await fetch(`${endpoint}?action=fetchAllData`, { redirect: 'follow' });
+        if (res.ok) {
+          const json = await res.json();
+          if (json.status === 'success' && json.data) {
+            const d = json.data;
+            if (Array.isArray(d.users)) setUsers(d.users);
+            if (Array.isArray(d.hospitals)) setHospitals(d.hospitals);
+            if (Array.isArray(d.counters)) setCounters(d.counters);
+            if (Array.isArray(d.paperTypes)) setPaperTypes(d.paperTypes);
+            if (Array.isArray(d.monthlyReadings)) setMonthlyReadings(d.monthlyReadings);
+            if (Array.isArray(d.stock)) setStock(d.stock);
+            if (Array.isArray(d.stockLedger)) setStockLedger(d.stockLedger);
+            if (Array.isArray(d.issueRegister)) setIssueRegister(d.issueRegister);
+            if (Array.isArray(d.permissions)) setPermissions(d.permissions);
+            if (Array.isArray(d.auditLog)) setAuditLogs(d.auditLog);
+            if (Array.isArray(d.settings)) setSettings(d.settings);
+            if (Array.isArray(d.monthlyPeriods)) setMonthlyPeriods(d.monthlyPeriods);
 
-          setIsLiveConnected(true);
+            setIsLiveConnected(true);
+          }
         }
       }
     } catch (err) {
