@@ -40,12 +40,12 @@ export function DataProvider({ children }) {
 
   // Fetch all 12 tabs live from Google Sheet API backend
   const fetchLiveSheetData = async () => {
-    setLoadingMessage('Fetching Live 12-Tab Data from Google Sheet Database...');
-    setLoading(true);
-    try {
-      const endpoint = getApiEndpoint();
-      // Only fetch if a real deployed Apps Script URL or local PHP endpoint is present
-      if (endpoint && !endpoint.includes('YOUR_DEPLOYED_ID_HERE')) {
+    const endpoint = getApiEndpoint();
+    // Only fetch if a real deployed Apps Script URL or local PHP endpoint is present
+    if (endpoint && !endpoint.includes('YOUR_DEPLOYED_ID_HERE')) {
+      setLoadingMessage('Fetching Live 12-Tab Data from Google Sheet Database...');
+      setLoading(true);
+      try {
         const res = await fetch(`${endpoint}?action=fetchAllData`, { redirect: 'follow' });
         if (res.ok) {
           const json = await res.json();
@@ -67,11 +67,11 @@ export function DataProvider({ children }) {
             setIsLiveConnected(true);
           }
         }
+      } catch (err) {
+        console.log('Live backend fetch fallback active:', err);
+      } finally {
+        setLoading(false);
       }
-    } catch (err) {
-      console.log('Live backend fetch fallback active:', err);
-    } finally {
-      setLoading(false);
     }
   };
 
