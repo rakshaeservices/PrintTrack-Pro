@@ -108,8 +108,27 @@ export function DataProvider({ children }) {
     fetch(`${endpoint}?action=appendRow`, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify({ action: 'appendRow', tabName: 'AuditLog', rowData: Object.values(log) })
+      body: JSON.stringify({ action: 'appendRow', tabName: 'AuditLog', rowData: Object.values(log) }),
+      redirect: 'follow'
     }).catch(() => {});
+  };
+
+  // Direct append helper to push any tab row directly to Google Sheets
+  const saveToSheet = async (tabName, rowData) => {
+    const endpoint = getApiEndpoint();
+    if (!endpoint || endpoint.includes('YOUR_DEPLOYED_ID_HERE')) return;
+    try {
+      await fetch(`${endpoint}?action=appendRow`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ action: 'appendRow', tabName: tabName, rowData: rowData }),
+        redirect: 'follow'
+      });
+      // Re-fetch live data to ensure Google Sheet is single source of truth
+      fetchLiveSheetData();
+    } catch (err) {
+      console.log('Sheet Save Error:', err);
+    }
   };
 
   const calculateHospitalStock = (hospitalId) => {
@@ -155,6 +174,7 @@ export function DataProvider({ children }) {
       settings, setSettings,
       monthlyPeriods, setMonthlyPeriods,
       addAuditLog,
+      saveToSheet,
       calculateHospitalStock
     }}>
       {children}

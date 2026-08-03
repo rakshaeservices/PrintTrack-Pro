@@ -4,7 +4,7 @@ import { useData } from '../context/DataContext';
 import { useAuth } from '../context/AuthContext';
 
 export default function Hospitals() {
-  const { hospitals, setHospitals, triggerServerAction, addAuditLog } = useData();
+  const { hospitals, setHospitals, triggerServerAction, addAuditLog, saveToSheet } = useData();
   const { currentUser, hasPermission } = useAuth();
   const [showModal, setShowModal] = useState(false);
   const [formData, setFormData] = useState({ name: '', code: '', countersCount: 5, storeEnabled: true });
@@ -12,19 +12,42 @@ export default function Hospitals() {
   const handleAddHospital = async (e) => {
     e.preventDefault();
     await triggerServerAction(async () => {
+      const hospitalId = 'HOSP-' + Date.now();
+      const now = new Date().toISOString().replace('T', ' ').substring(0, 19);
+
+      const hospitalRow = [
+        hospitalId,
+        formData.code.toUpperCase(),
+        formData.name,
+        'Main Campus Address', // Address
+        'City', // City
+        'Store Manager', // ContactPerson
+        '+91 9876543210', // Mobile
+        parseInt(formData.countersCount) || 5, // TotalCounters
+        'TRUE', // IsActive
+        now, // CreatedOn
+        now  // UpdatedOn
+      ];
+
       const newH = {
-        id: 'h' + (hospitals.length + 1),
-        name: formData.name,
+        id: hospitalId,
+        HospitalID: hospitalId,
+        HospitalCode: formData.code.toUpperCase(),
         code: formData.code.toUpperCase(),
-        countersCount: parseInt(formData.countersCount) || 0,
+        HospitalName: formData.name,
+        name: formData.name,
+        countersCount: parseInt(formData.countersCount) || 5,
+        TotalCounters: parseInt(formData.countersCount) || 5,
         storeEnabled: formData.storeEnabled,
         status: 'Active'
       };
-      setHospitals([...hospitals, newH]);
+
+      setHospitals([newH, ...hospitals]);
+      await saveToSheet('Hospitals', hospitalRow);
       addAuditLog(currentUser.email, 'Create Hospital', '-', `${newH.name} (${newH.code})`);
       setShowModal(false);
       setFormData({ name: '', code: '', countersCount: 5, storeEnabled: true });
-    }, 'Saving New Hospital Registry...');
+    }, 'Saving Hospital Row to Hospitals!A:K Google Sheet...');
   };
 
   const toggleStatus = async (id) => {
