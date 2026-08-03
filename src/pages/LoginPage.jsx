@@ -17,7 +17,11 @@ export default function LoginPage() {
       await loginWithFirebaseGoogle();
     } catch (err) {
       console.log("Firebase popup fallback:", err);
-      setErrorMsg(err.message || 'Firebase OAuth popup closed or blocked.');
+      if (err.message && err.message.includes('api-key-not-valid')) {
+        setErrorMsg('Firebase Web API key is not configured in .env. Please fill your email below to log in directly.');
+      } else {
+        setErrorMsg(err.message || 'Firebase OAuth popup closed or blocked.');
+      }
     } finally {
       setIsSigningIn(false);
     }
