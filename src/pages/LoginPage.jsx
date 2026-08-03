@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
-import { Printer, Shield, CheckCircle2, ArrowRight, Lock, Building2 } from 'lucide-react';
+import { Printer } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 export default function LoginPage() {
-  const { loginWithGoogle, mockUsers } = useAuth();
-  const [customEmail, setCustomEmail] = useState('softtech.lovejeet@gmail.com');
-  const [customName, setCustomName] = useState('Lovejeet (Super Admin)');
+  const { loginWithGoogle } = useAuth();
+  const [customEmail, setCustomEmail] = useState('');
+  const [customName, setCustomName] = useState('');
   const [isSigningIn, setIsSigningIn] = useState(false);
 
   const handleGoogleSubmit = (e) => {
@@ -13,11 +13,6 @@ export default function LoginPage() {
     if (!customEmail) return;
     setIsSigningIn(true);
     loginWithGoogle(customEmail, customName);
-  };
-
-  const handleQuickDemoLogin = (user) => {
-    setIsSigningIn(true);
-    loginWithGoogle(user.email, user.name);
   };
 
   return (
@@ -33,19 +28,19 @@ export default function LoginPage() {
       
       <div style={{
         width: '100%',
-        maxWidth: '440px',
+        maxWidth: '400px',
         backgroundColor: '#1e293b',
         border: '1px solid #334155',
         borderRadius: '12px',
-        padding: '1.75rem',
+        padding: '2rem 1.75rem',
         boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
         display: 'flex',
         flexDirection: 'column',
-        gap: '1.25rem'
+        gap: '1.5rem'
       }}>
         
         {/* Brand Header */}
-        <div style={{ textAlignment: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem', textAlign: 'center' }}>
           <div style={{
             background: 'linear-gradient(135deg, #2563eb, #38bdf8)',
             padding: '0.75rem',
@@ -66,7 +61,7 @@ export default function LoginPage() {
           </p>
         </div>
 
-        {/* Google Identity Sign-In Form */}
+        {/* Clean Google Identity Sign-In Form */}
         <form onSubmit={handleGoogleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
           <div>
             <label style={{ fontSize: '0.725rem', color: '#94a3b8', marginBottom: '0.35rem', display: 'block', fontWeight: 500 }}>
@@ -76,7 +71,7 @@ export default function LoginPage() {
               type="email"
               required
               className="form-control"
-              placeholder="e.g. softtech.lovejeet@gmail.com"
+              placeholder="Enter your authorized Google email"
               value={customEmail}
               onChange={e => setCustomEmail(e.target.value)}
               style={{ padding: '0.55rem 0.75rem' }}
@@ -90,7 +85,7 @@ export default function LoginPage() {
             <input
               type="text"
               className="form-control"
-              placeholder="e.g. Lovejeet Singh"
+              placeholder="Enter your full name"
               value={customName}
               onChange={e => setCustomName(e.target.value)}
               style={{ padding: '0.55rem 0.75rem' }}
@@ -114,7 +109,7 @@ export default function LoginPage() {
               alignItems: 'center',
               justifyContent: 'center',
               gap: '0.5rem',
-              marginTop: '0.35rem',
+              marginTop: '0.5rem',
               boxShadow: '0 2px 6px rgba(255,255,255,0.2)',
               transition: 'all 0.15s ease'
             }}
@@ -126,45 +121,9 @@ export default function LoginPage() {
               <path fill="#FBBC05" d="M5.84 14.1c-.22-.66-.35-1.36-.35-2.1s.13-1.44.35-2.1V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.62z"/>
               <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
             </svg>
-            <span>{isSigningIn ? 'Signing in with Google Identity...' : 'Sign in with Google'}</span>
+            <span>{isSigningIn ? 'Authenticating with Google...' : 'Sign in with Google'}</span>
           </button>
         </form>
-
-        {/* Quick RBAC Role Simulator Launcher */}
-        <div style={{ borderTop: '1px solid #334155', paddingTop: '1rem' }}>
-          <span style={{ fontSize: '0.7rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600, display: 'block', marginBottom: '0.6rem' }}>
-            Instant RBAC Demo Accounts
-          </span>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-            {mockUsers.map(user => (
-              <button
-                key={user.id}
-                onClick={() => handleQuickDemoLogin(user)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  padding: '0.4rem 0.6rem',
-                  backgroundColor: '#0f172a',
-                  border: '1px solid #334155',
-                  borderRadius: '6px',
-                  color: '#f8fafc',
-                  cursor: 'pointer',
-                  fontSize: '0.75rem',
-                  textAlign: 'left'
-                }}
-              >
-                <div>
-                  <span style={{ fontWeight: 600, display: 'block' }}>{user.name}</span>
-                  <span style={{ fontSize: '0.675rem', color: '#94a3b8' }}>{user.email}</span>
-                </div>
-                <span className={`badge ${user.role === 'SUPERADMIN' ? 'badge-danger' : 'badge-primary'}`}>
-                  {user.role}
-                </span>
-              </button>
-            ))}
-          </div>
-        </div>
 
       </div>
 

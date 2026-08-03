@@ -81,6 +81,30 @@ export default function UserManagement() {
         </button>
       </div>
 
+      {/* RBAC Reference Accounts Panel */}
+      <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: 'var(--clm-radius-md)', padding: '0.85rem' }}>
+        <h3 style={{ fontSize: '0.85rem', fontWeight: 600, color: '#fff', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+          <Shield size={14} color="var(--accent)" /> System Pre-Configured RBAC Demo Accounts
+        </h3>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.5rem' }}>
+          {[
+            { name: 'Lovejeet (Super Admin)', email: 'softtech.lovejeet@gmail.com', role: 'SUPERADMIN' },
+            { name: 'Executive Director', email: 'director@printtrack.com', role: 'DIRECTOR' },
+            { name: 'Operations Manager', email: 'manager@printtrack.com', role: 'MANAGER' },
+            { name: 'UMMED Location Admin', email: 'admin.ummed@printtrack.com', role: 'LOCATION_ADMIN' },
+            { name: 'Store Operator', email: 'operator@printtrack.com', role: 'STORE_OPERATOR' }
+          ].map(acc => (
+            <div key={acc.email} style={{ background: '#0f172a', padding: '0.5rem', borderRadius: 'var(--clm-radius-sm)', border: '1px solid var(--border-color)' }}>
+              <div style={{ fontWeight: 600, fontSize: '0.75rem', color: '#fff' }}>{acc.name}</div>
+              <div style={{ fontSize: '0.675rem', color: 'var(--text-muted)' }}>{acc.email}</div>
+              <span className={`badge ${acc.role === 'SUPERADMIN' ? 'badge-danger' : 'badge-primary'}`} style={{ marginTop: '0.25rem', fontSize: '0.625rem' }}>
+                {acc.role}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+
       <div className="table-responsive">
         <table className="table-compact">
           <thead>
