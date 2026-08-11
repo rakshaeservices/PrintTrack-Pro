@@ -8,7 +8,7 @@ export default function BottomNavbar({ activeTab, setActiveTab }) {
 
   const bottomItems = [
     { id: 'dashboard',        label: 'Home',      icon: LayoutDashboard,  roles: ['SUPERADMIN', 'DIRECTOR', 'MANAGER', 'LOCATION_ADMIN', 'STORE_OPERATOR'] },
-    { id: 'hospitals',        label: 'Hospitals', icon: Building2,        roles: ['SUPERADMIN', 'DIRECTOR'] },
+    { id: 'hospitals',        label: 'Hospitals', icon: Building2,        roles: ['SUPERADMIN'] },
     { id: 'monthly_readings', label: 'Readings',  icon: FileSpreadsheet,  roles: ['SUPERADMIN', 'MANAGER', 'LOCATION_ADMIN', 'STORE_OPERATOR'] },
     { id: 'issue_paper',      label: 'Issue',     icon: Send,             roles: ['SUPERADMIN', 'MANAGER', 'STORE_OPERATOR'] },
     { id: 'reports',          label: 'Reports',   icon: BarChart3,        roles: ['SUPERADMIN', 'DIRECTOR', 'MANAGER', 'LOCATION_ADMIN'] }

@@ -24,7 +24,7 @@ export default function Sidebar({ activeTab, setActiveTab, isMobileMenuOpen, set
   const navItems = [
     { id: 'dashboard',        label: 'Dashboard',            icon: LayoutDashboard,  roles: ['SUPERADMIN', 'DIRECTOR', 'MANAGER', 'LOCATION_ADMIN', 'STORE_OPERATOR'], perm: 'view_dashboard' },
     { id: 'users',            label: 'User Management',      icon: Users,            roles: ['SUPERADMIN'] },
-    { id: 'hospitals',        label: 'Hospital Registry',    icon: Building2,        roles: ['SUPERADMIN', 'DIRECTOR'], perm: 'view_hospital_data' },
+    { id: 'hospitals',        label: 'Hospital Registry',    icon: Building2,        roles: ['SUPERADMIN'], perm: 'view_hospital_data' },
     { id: 'counters',         label: 'Counters (Printers)',  icon: Printer,          roles: ['SUPERADMIN', 'MANAGER', 'LOCATION_ADMIN'] },
     { id: 'monthly_readings', label: 'Monthly Readings',     icon: FileSpreadsheet,  roles: ['SUPERADMIN', 'MANAGER', 'LOCATION_ADMIN', 'STORE_OPERATOR'], perm: 'view_readings' },
     { id: 'stock',            label: 'Stock Ledger',         icon: Package,          roles: ['SUPERADMIN', 'MANAGER', 'LOCATION_ADMIN', 'STORE_OPERATOR'], perm: 'view_stock' },

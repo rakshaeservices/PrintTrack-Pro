@@ -28,8 +28,7 @@ export default function Hospitals() {
   const { currentUser } = useAuth();
 
   const isSuperAdmin = currentUser?.role === 'SUPERADMIN';
-  const isDirector  = currentUser?.role === 'DIRECTOR';
-  const canView     = isSuperAdmin || isDirector;
+  const canView     = isSuperAdmin;
 
   const [showForm,  setShowForm]  = useState(false);
   const [formData,  setFormData]  = useState(EMPTY_FORM);
@@ -43,7 +42,7 @@ export default function Hospitals() {
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '3rem 1rem', gap: '0.75rem' }}>
         <ShieldOff size={36} color="var(--text-muted)" />
         <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', textAlign: 'center' }}>
-          Hospital Registry is accessible only to <strong style={{ color: '#fff' }}>SUPERADMIN</strong> and <strong style={{ color: '#fff' }}>DIRECTOR</strong>.
+          Hospital Registry is accessible only to <strong style={{ color: '#fff' }}>SUPERADMIN</strong>.
         </p>
       </div>
     );
@@ -142,6 +141,35 @@ export default function Hospitals() {
         (h.HospitalID === hItem.HospitalID || h.id === hItem.id) ? updatedH : h
       ));
 
+      // Persist directly to Google Sheets via saveToSheet (upsert row in Hospitals!A:K)
+      const hospitalRow = [
+        updatedH.HospitalID,
+        updatedH.HospitalCode,
+        updatedH.HospitalName,
+        updatedH.Address,
+        updatedH.City,
+        updatedH.ContactPerson,
+        updatedH.Mobile,
+        updatedH.TotalCounters,
+        updatedH.IsActive,
+        updatedH.CreatedOn || now,
+        now
+      ];
+
+      const endpoint = localStorage.getItem('pt_sheets_url') || import.meta.env.VITE_APPS_SCRIPT_URL || 'https://script.google.com/macros/s/AKfycbzEvndxwKutCuS06LvDQb_Iu0KcutInJTdGxQ6P-BtlbbNRcfSPdyD1QcQ9J4WK73HlCw/exec';
+
+      fetch(`${endpoint}?action=upsertRow`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({
+          action: 'upsertRow',
+          tabName: 'Hospitals',
+          matchColumn: 'HospitalID',
+          rowData: hospitalRow
+        }),
+        redirect: 'follow'
+      }).catch(() => {});
+
       addAuditLog(currentUser.email, 'Edit Hospital',
         `${hItem.HospitalName} (${hItem.HospitalCode})`,
         `${updatedH.HospitalName} (${updatedH.HospitalCode})`
@@ -159,16 +187,54 @@ export default function Hospitals() {
     await triggerServerAction(async () => {
       const wasActive = hItem.IsActive === 'TRUE' || hItem.status === 'Active';
       const nextActive = wasActive ? 'FALSE' : 'TRUE';
+      const now = new Date().toISOString().replace('T', ' ').substring(0, 19);
+      const targetH = hospitals.find(h => (h.HospitalID && h.HospitalID === hItem.HospitalID) || h.id === hItem.id);
+      if (!targetH) return;
+
+      const updatedH = {
+        ...targetH,
+        IsActive: nextActive,
+        status: nextActive === 'TRUE' ? 'Active' : 'Inactive',
+        UpdatedOn: now
+      };
+
       setHospitals(hospitals.map(h => {
         if ((h.HospitalID && h.HospitalID === hItem.HospitalID) || h.id === hItem.id) {
-          addAuditLog(currentUser.email, 'Toggle Hospital Status',
-            `${h.HospitalName || h.name}: ${wasActive ? 'Active' : 'Inactive'}`,
-            `${h.HospitalName || h.name}: ${nextActive === 'TRUE' ? 'Active' : 'Inactive'}`
-          );
-          return { ...h, IsActive: nextActive, status: nextActive === 'TRUE' ? 'Active' : 'Inactive' };
+          return updatedH;
         }
         return h;
       }));
+
+      // Direct upsert to Google Sheets
+      const endpoint = localStorage.getItem('pt_sheets_url') || import.meta.env.VITE_APPS_SCRIPT_URL || 'https://script.google.com/macros/s/AKfycbzEvndxwKutCuS06LvDQb_Iu0KcutInJTdGxQ6P-BtlbbNRcfSPdyD1QcQ9J4WK73HlCw/exec';
+      fetch(`${endpoint}?action=upsertRow`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({
+          action: 'upsertRow',
+          tabName: 'Hospitals',
+          matchColumn: 'HospitalID',
+          rowData: [
+            updatedH.HospitalID || updatedH.id,
+            updatedH.HospitalCode || updatedH.code,
+            updatedH.HospitalName || updatedH.name,
+            updatedH.Address || '-',
+            updatedH.City || '-',
+            updatedH.ContactPerson || '-',
+            updatedH.Mobile || '-',
+            updatedH.TotalCounters || updatedH.countersCount || 5,
+            updatedH.IsActive,
+            updatedH.CreatedOn || now,
+            now
+          ]
+        }),
+        redirect: 'follow'
+      }).catch(() => {});
+
+      addAuditLog(currentUser.email, 'Toggle Hospital Status',
+        `${hItem.HospitalName || hItem.name}: ${wasActive ? 'Active' : 'Inactive'}`,
+        `${hItem.HospitalName || hItem.name}: ${nextActive === 'TRUE' ? 'Active' : 'Inactive'}`
+      );
     }, 'Updating Hospital Status...');
   };
 
