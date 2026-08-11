@@ -4,7 +4,7 @@ import { useData } from '../context/DataContext';
 import { useAuth } from '../context/AuthContext';
 
 export default function MonthlyReadings() {
-  const { monthlyReadings, setMonthlyReadings, hospitals, counters, triggerServerAction, addAuditLog } = useData();
+  const { monthlyReadings, setMonthlyReadings, hospitals, counters, triggerServerAction, addAuditLog, saveToSheet } = useData();
   const { currentUser, hasPermission } = useAuth();
   
   const [showModal, setShowModal] = useState(false);
@@ -14,47 +14,94 @@ export default function MonthlyReadings() {
   const [unlockReason, setUnlockReason] = useState('');
   const [unlockProofFile, setUnlockProofFile] = useState(null);
 
+  // BUG-05 fix: use HospitalID/CounterID for live data
+  const firstHospitalId = hospitals[0]?.HospitalID || hospitals[0]?.id || '';
+  const firstCounterId  = counters[0]?.CounterID  || counters[0]?.id  || '';
+
   const [formData, setFormData] = useState({
-    month: 'August 2026',
-    hospitalId: hospitals[0]?.id || '',
-    counterId: counters[0]?.id || '',
-    opening: 125850,
-    closing: 131950,
-    issued: 15,
-    used: 13
+    month: new Date().toLocaleString('default', { month: 'long', year: 'numeric' }),
+    hospitalId: firstHospitalId,
+    counterId:  firstCounterId,
+    opening: '',
+    closing: '',
+    issued: '',
+    used: ''
   });
 
-  const selectedCounter = counters.find(c => c.id === formData.counterId);
+  // BUG-05 fix: lookup by HospitalID || id
+  const selectedCounter = counters.find(c => (c.CounterID || c.id) === formData.counterId);
 
   const handleCreateReading = async (e) => {
     e.preventDefault();
     await triggerServerAction(async () => {
       const consumption = Math.max(0, parseInt(formData.closing) - parseInt(formData.opening));
-      const balance = Math.max(0, parseInt(formData.issued) - parseInt(formData.used));
-      const selH = hospitals.find(h => h.id === formData.hospitalId);
-      const selC = counters.find(c => c.id === formData.counterId);
+      const balance     = Math.max(0, parseInt(formData.issued)  - parseInt(formData.used));
+      // BUG-05 fix: use HospitalID || id and HospitalName || name
+      const selH = hospitals.find(h => (h.HospitalID || h.id) === formData.hospitalId);
+      const selC = counters.find(c  => (c.CounterID  || c.id) === formData.counterId);
+      const now  = new Date().toISOString().replace('T', ' ').substring(0, 19);
+      const readingId = 'MR-' + Date.now();
 
       const newRecord = {
-        id: 'mr' + Date.now(),
-        month: formData.month,
-        hospitalId: formData.hospitalId,
-        hospitalName: selH ? selH.name : 'Hospital',
-        counterId: formData.counterId,
-        counterName: selC ? selC.name : 'Counter',
-        opening: parseInt(formData.opening),
-        closing: parseInt(formData.closing),
+        id:           readingId,
+        ReadingID:    readingId,
+        month:        formData.month,
+        Month:        formData.month,
+        hospitalId:   formData.hospitalId,
+        HospitalID:   formData.hospitalId,
+        hospitalName: selH ? (selH.HospitalName || selH.name || 'Hospital') : 'Hospital',
+        counterId:    formData.counterId,
+        CounterID:    formData.counterId,
+        counterName:  selC ? (selC.CounterName  || selC.name  || 'Counter')  : 'Counter',
+        opening:      parseInt(formData.opening),
+        OpeningReading: parseInt(formData.opening),
+        closing:      parseInt(formData.closing),
+        ClosingReading: parseInt(formData.closing),
         consumption,
-        issued: parseInt(formData.issued),
-        used: parseInt(formData.used),
+        Consumption:  consumption,
+        issued:       parseInt(formData.issued),
+        PaperIssued:  parseInt(formData.issued),
+        used:         parseInt(formData.used),
+        PaperUsed:    parseInt(formData.used),
         balance,
-        submittedBy: currentUser.name,
-        verified: 'Pending',
-        locked: true // Locked YES after submission as per specification
+        PaperBalance: balance,
+        submittedBy:  currentUser.name,
+        SubmittedBy:  currentUser.email,
+        verified:     'Pending',
+        VerificationStatus: 'Pending',
+        locked:       true,
+        IsLocked:     'TRUE',
+        CreatedOn:    now
       };
 
       setMonthlyReadings([newRecord, ...monthlyReadings]);
-      addAuditLog(currentUser.email, 'Submit Monthly Reading', '-', `${formData.month} - ${newRecord.counterName} (${consumption} pages)`);
+
+      // BUG-08 fix: persist to MonthlyReadings Google Sheet
+      await saveToSheet('MonthlyReadings', [
+        readingId,
+        formData.month,
+        formData.hospitalId,
+        formData.counterId,
+        parseInt(formData.opening),
+        parseInt(formData.closing),
+        consumption,
+        parseInt(formData.issued),
+        parseInt(formData.used),
+        balance,
+        currentUser.email,
+        'Pending',
+        'TRUE',
+        now,
+        now
+      ]);
+
+      addAuditLog(currentUser.email, 'Submit Monthly Reading', '-',
+        `${formData.month} - ${newRecord.counterName} (${consumption} pages)`);
       setShowModal(false);
+      setFormData(prev => ({
+        ...prev,
+        opening: '', closing: '', issued: '', used: ''
+      }));
     }, 'Saving Monthly Reading Entry & Locking Record...');
   };
 
@@ -220,7 +267,7 @@ export default function MonthlyReadings() {
                       value={formData.hospitalId}
                       onChange={e => setFormData({ ...formData, hospitalId: e.target.value })}
                     >
-                      {hospitals.map(h => <option key={h.id} value={h.id}>{h.name}</option>)}
+                      {hospitals.map(h => <option key={h.HospitalID || h.id} value={h.HospitalID || h.id}>{h.HospitalName || h.name}</option>)}
                     </select>
                   </div>
                 </div>
@@ -232,9 +279,13 @@ export default function MonthlyReadings() {
                     value={formData.counterId}
                     onChange={e => setFormData({ ...formData, counterId: e.target.value })}
                   >
-                    {counters.filter(c => c.hospitalId === formData.hospitalId).map(c => (
-                      <option key={c.id} value={c.id}>{c.name} ({c.printerModel})</option>
-                    ))}
+                    {counters
+                      .filter(c => (c.HospitalID || c.hospitalId) === formData.hospitalId)
+                      .map(c => (
+                        <option key={c.CounterID || c.id} value={c.CounterID || c.id}>
+                          {c.CounterName || c.name} ({c.PrinterModel || c.printerModel || 'Printer'})
+                        </option>
+                      ))}
                   </select>
                 </div>
 
