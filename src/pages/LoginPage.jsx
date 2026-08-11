@@ -32,10 +32,14 @@ export default function LoginPage() {
   const handleEmailSubmit = async (e) => {
     e.preventDefault();
     if (!customEmail) return;
+    if (!password) {
+      setErrorMsg('Please enter your password.');
+      return;
+    }
     setIsSigningIn(true);
     setErrorMsg('');
     try {
-      await loginWithEmailPassword(customEmail, password || 'PrintTrack@123', customName);
+      await loginWithEmailPassword(customEmail, password, customName);
     } catch (err) {
       setErrorMsg(err.message || 'Email & Password Authentication failed.');
     } finally {

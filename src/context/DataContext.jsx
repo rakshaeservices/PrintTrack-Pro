@@ -123,7 +123,7 @@ export function DataProvider({ children }) {
   }, [pendingOfflineQueue]);
 
   // Sync offline queued rows when network comes back online
-  const syncOfflineQueue = async () => {
+  const syncOfflineQueue = useCallback(async () => {
     if (pendingOfflineQueue.length === 0) return;
     const endpoint = getApiEndpoint();
     if (!endpoint || endpoint.includes('YOUR_DEPLOYED_ID_HERE')) return;
@@ -150,7 +150,7 @@ export function DataProvider({ children }) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [pendingOfflineQueue]);
 
   // Auto-trigger sync when device comes online
   useEffect(() => {
@@ -159,7 +159,7 @@ export function DataProvider({ children }) {
     };
     window.addEventListener('online', handleOnline);
     return () => window.removeEventListener('online', handleOnline);
-  }, [pendingOfflineQueue]);
+  }, [syncOfflineQueue]);
 
   // Direct append helper with offline fallback queue support
   const saveToSheet = async (tabName, rowData) => {
