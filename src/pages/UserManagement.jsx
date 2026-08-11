@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext';
 
 export default function UserManagement() {
   const { users, setUsers, hospitals, triggerServerAction, addAuditLog, saveToSheet } = useData();
-  const { currentUser } = useAuth();
+  const { currentUser, addRuntimeUser } = useAuth();
 
   const [showModal, setShowModal] = useState(false);
   const [formData, setFormData] = useState({
@@ -59,6 +59,13 @@ export default function UserManagement() {
       }
 
       setUsers([newUser, ...users]);
+      // Auto-authorize login access so user can log in immediately
+      addRuntimeUser({
+        email: newUser.Email,
+        name: newUser.FullName,
+        role: newUser.Role,
+        hospitalId: newUser.HospitalID
+      });
       // Persist to Users!A:M (13 columns)
       await saveToSheet('Users', [
         newUser.UserID, newUser.FullName, newUser.Email,

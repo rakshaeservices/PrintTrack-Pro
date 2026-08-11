@@ -22,16 +22,16 @@ export default function Sidebar({ activeTab, setActiveTab, isMobileMenuOpen, set
   const role = currentUser?.role;
 
   const navItems = [
-    { id: 'dashboard',        label: 'Dashboard',            icon: LayoutDashboard,  roles: ['SUPERADMIN', 'DIRECTOR', 'MANAGER', 'LOCATION_ADMIN', 'STORE_OPERATOR'] },
+    { id: 'dashboard',        label: 'Dashboard',            icon: LayoutDashboard,  roles: ['SUPERADMIN', 'DIRECTOR', 'MANAGER', 'LOCATION_ADMIN', 'STORE_OPERATOR'], perm: 'view_dashboard' },
     { id: 'users',            label: 'User Management',      icon: Users,            roles: ['SUPERADMIN'] },
-    { id: 'hospitals',        label: 'Hospital Registry',    icon: Building2,        roles: ['SUPERADMIN', 'DIRECTOR'] },
+    { id: 'hospitals',        label: 'Hospital Registry',    icon: Building2,        roles: ['SUPERADMIN', 'DIRECTOR'], perm: 'view_hospital_data' },
     { id: 'counters',         label: 'Counters (Printers)',  icon: Printer,          roles: ['SUPERADMIN', 'MANAGER', 'LOCATION_ADMIN'] },
-    { id: 'monthly_readings', label: 'Monthly Readings',     icon: FileSpreadsheet,  roles: ['SUPERADMIN', 'MANAGER', 'LOCATION_ADMIN', 'STORE_OPERATOR'] },
-    { id: 'stock',            label: 'Stock Ledger',         icon: Package,          roles: ['SUPERADMIN', 'MANAGER', 'LOCATION_ADMIN', 'STORE_OPERATOR'] },
-    { id: 'issue_paper',      label: 'Issue Paper',          icon: Send,             roles: ['SUPERADMIN', 'MANAGER', 'STORE_OPERATOR'] },
+    { id: 'monthly_readings', label: 'Monthly Readings',     icon: FileSpreadsheet,  roles: ['SUPERADMIN', 'MANAGER', 'LOCATION_ADMIN', 'STORE_OPERATOR'], perm: 'view_readings' },
+    { id: 'stock',            label: 'Stock Ledger',         icon: Package,          roles: ['SUPERADMIN', 'MANAGER', 'LOCATION_ADMIN', 'STORE_OPERATOR'], perm: 'view_stock' },
+    { id: 'issue_paper',      label: 'Issue Paper',          icon: Send,             roles: ['SUPERADMIN', 'MANAGER', 'STORE_OPERATOR'], perm: 'issue_paper' },
     { id: 'paper_types',      label: 'Paper Types',          icon: Layers,           roles: ['SUPERADMIN', 'MANAGER'] },
     { id: 'consumables',      label: 'Future Consumables',   icon: Boxes,            roles: ['SUPERADMIN', 'DIRECTOR', 'MANAGER'] },
-    { id: 'reports',          label: 'Reports',              icon: BarChart3,        roles: ['SUPERADMIN', 'DIRECTOR', 'MANAGER', 'LOCATION_ADMIN'] },
+    { id: 'reports',          label: 'Reports',              icon: BarChart3,        roles: ['SUPERADMIN', 'DIRECTOR', 'MANAGER', 'LOCATION_ADMIN'], perm: 'view_reports' },
     { id: 'audit_log',        label: 'Audit Trail',          icon: History,          roles: ['SUPERADMIN', 'DIRECTOR'] },
     { id: 'permissions',      label: 'Permissions & Access',  icon: ShieldCheck,      roles: ['SUPERADMIN'] },
     { id: 'settings',         label: 'Settings & API Config', icon: Settings,         roles: ['SUPERADMIN'] }
@@ -51,8 +51,10 @@ export default function Sidebar({ activeTab, setActiveTab, isMobileMenuOpen, set
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
           {navItems.map((item) => {
             const Icon = item.icon;
-            const isAllowed = item.roles.includes(role);
-            if (!isAllowed) return null;
+            // Check both static role matrix and dynamic hasPermission if perm defined
+            const isRoleAllowed = item.roles.includes(role);
+            const isPermAllowed = item.perm ? hasPermission(item.perm) : true;
+            if (!isRoleAllowed || !isPermAllowed) return null;
 
             const isActive = activeTab === item.id;
             return (
