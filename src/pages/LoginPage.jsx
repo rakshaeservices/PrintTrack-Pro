@@ -152,13 +152,13 @@ export default function LoginPage() {
         <form onSubmit={handleEmailSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
           <div>
             <label style={{ fontSize: '0.725rem', color: '#94a3b8', marginBottom: '0.35rem', display: 'block', fontWeight: 500 }}>
-              Authorized Google Email
+              Work / Authorized Email Address
             </label>
             <input
               type="email"
               required
               className="form-control"
-              placeholder="e.g. softtech.lovejeet@gmail.com"
+              placeholder="name@company.com"
               value={customEmail}
               onChange={e => setCustomEmail(e.target.value)}
               style={{ padding: '0.55rem 0.75rem' }}
@@ -171,8 +171,9 @@ export default function LoginPage() {
             </label>
             <input
               type="password"
+              required
               className="form-control"
-              placeholder="Enter password (e.g. PrintTrack@123)"
+              placeholder="Enter your password"
               value={password}
               onChange={e => setPassword(e.target.value)}
               style={{ padding: '0.55rem 0.75rem' }}
